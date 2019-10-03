@@ -1,6 +1,7 @@
 # toolbox - bring your tools with you
 
-toolbox is a small script that launches a container to let you bring in your favorite debugging or admin tools.
+On systems using `transactional-update` it is not really possible due to the read-only root filesystem to install tools to analyze problems in the currently running system, a reboot is always required. Which makes it next to impossible to debug such problems.
+`toolbox` is a small script that launches a container to let you bring in your favorite debugging or admin tools in such a system. The root filesystem can be found at `/media/root`.
 
 ## Usage
 
