@@ -23,6 +23,7 @@ REGISTRY=registry.opensuse.org
 IMAGE=opensuse/toolbox
 TOOLBOX_NAME=toolbox-"${USER}"
 TOOLBOXRC="${HOME}"/.toolboxrc
+SUDO=
 
 setup() {
     # Allow user overrides
@@ -66,31 +67,31 @@ run() {
 }
 
 cleanup() {
-    podman stop "$TOOLBOX_NAME" &>/dev/null
+    ${SUDO} podman stop "$TOOLBOX_NAME" &>/dev/null
 }
 
 container_exists() {
-    podman inspect "$TOOLBOX_NAME" &>/dev/null
+    ${SUDO} podman inspect "$TOOLBOX_NAME" &>/dev/null
 }
 
 container_state() {
-    podman inspect "$TOOLBOX_NAME" --format '{{.State.Status}}'
+    ${SUDO} podman inspect "$TOOLBOX_NAME" --format '{{.State.Status}}'
 }
 
 image_exists() {
-    podman inspect "$TOOLBOX_IMAGE" &>/dev/null
+    ${SUDO} podman inspect "$TOOLBOX_IMAGE" &>/dev/null
 }
 
 image_runlabel() {
-    podman container runlabel --display RUN "$TOOLBOX_IMAGE" 2> /dev/null
+    ${SUDO} podman container runlabel --display RUN "$TOOLBOX_IMAGE" 2> /dev/null
 }
 
 image_pull() {
-    podman pull "$TOOLBOX_IMAGE"
+    ${SUDO} podman pull "$TOOLBOX_IMAGE"
 }
 
 container_create() {
-    if ! podman create \
+    if ! ${SUDO} podman create \
                  --hostname toolbox \
                  --name "$TOOLBOX_NAME" \
                  --network host \
@@ -105,21 +106,21 @@ container_create() {
 }
 
 container_start() {
-    if ! podman start "$TOOLBOX_NAME" 2>&1; then
+    if ! ${SUDO} podman start "$TOOLBOX_NAME" 2>&1; then
         echo "$0: failed to start container '$TOOLBOX_NAME'"
         exit 1
     fi
 }
 
 container_runlabel() {
-    if ! podman container runlabel --name "$TOOLBOX_NAME" RUN "$TOOLBOX_IMAGE" 2>&1; then
+    if ! ${SUDO} podman container runlabel --name "$TOOLBOX_NAME" RUN "$TOOLBOX_IMAGE" 2>&1; then
         echo "$0: failed to runlabel on image '$TOOLBOX_IMAGE'"
         exit 1
     fi
 }
 
 container_exec() {
-    podman exec \
+    ${SUDO} podman exec \
             --env LANG="$LANG" \
             --env TERM="$TERM" \
             --interactive \
@@ -129,13 +130,14 @@ container_exec() {
 }
 
 show_help() {
-    echo "USAGE: toolbox [-h/--help] [command]
+    echo "USAGE: toolbox [-h/--help]|[-r/--root] [command]
 toolbox is a small script that launches a container to let you bring in your favorite debugging or admin tools.
 The toolbox container is a pet container and will be restarted on following runs.
 To remove the container and start fresh, do podman rm ${TOOLBOX_NAME}.
 
 Options:
   -h/--help: Shows this help message
+  -r/--root: Runs podman via sudo as root
 
 You may override the following variables by setting them in ${TOOLBOXRC}:
 - REGISTRY: The registry to pull from. Default: $REGISTRY
@@ -156,12 +158,16 @@ main() {
         show_help
         exit 0
     fi
+    if [[ "$1" =~ ^(--root|-r)$ ]]; then
+        shift
+	SUDO=sudo
+    fi
+
+    if [ ! -n "$*" ]; then
+	set /bin/sh "$@"
+    fi
     run "$@"
     cleanup
 }
-
-if [ ! -n "$*" ]; then
-    set /bin/sh "$@"
-fi
 
 main "$@"

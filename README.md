@@ -13,9 +13,24 @@ toolbox-root
 Container started successfully. To exit, type 'exit'.
 sh-5.0# ls -alF /media/root
 ...
-[root@localhost ~]# tcpdump -i ens3
+sh-5.0# tcpdump -i ens3
 tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
 listening on ens3, link-type EN10MB (Ethernet), capture size 65535 bytes
+...
+sh-5.0# zypper in vim
+Loading repository data...
+Reading installed packages...
+Resolving package dependencies...
+
+The following 5 NEW packages are going to be installed:
+  libgdbm6 libgdbm_compat4 perl vim vim-data-common
+
+5 new packages to install.
+Overall download size: 9.0 MiB. Already cached: 0 B. After the operation,
+additional 49.4 MiB will be used.
+Continue? [y/n/v/...? shows all options] (y):
+...
+sh-5.0# vi /media/root/etc/passwd
 ```
 
 ## Advanced Usage
@@ -32,11 +47,15 @@ REGISTRY=registry.opensuse.org
 IMAGE=opensuse/toolbox:latest
 ```
 
+### Root container as normal user
+
+toolbox called by a normal user will start the toolbox container, too, but the root filesystem cannot be modified. Running toolbox with sudo has the disadvantage, that the .toolboxrc from root and not the user is used. To run the toolbox container with root rights, `toolbox --root` has to be used.
+
 ### Automatically enter toolbox on login
 
 Set an `/etc/passwd` entry for one of the users to `/usr/bin/toolbox`:
 
-```sh
+```
 useradd bob -m -s /usr/bin/toolbox
 ```
 
@@ -50,5 +69,5 @@ Container 'toolbox-bob' already exists. Trying to start...
 (To remove the container and start with a fresh toolbox, run: podman rm 'toolbox-bob')
 toolbox-bob
 Container started successfully. To exit, type 'exit'.
-sh-5.0# 
+sh-5.0#
 ```
