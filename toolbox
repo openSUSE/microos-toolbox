@@ -23,6 +23,7 @@ REGISTRY=registry.opensuse.org
 IMAGE=opensuse/toolbox
 TOOLBOX_NAME=toolbox-"${USER}"
 TOOLBOXRC="${HOME}"/.toolboxrc
+TOOLBOX_SHELL="/bin/bash"
 SUDO=
 
 setup() {
@@ -143,11 +144,13 @@ You may override the following variables by setting them in ${TOOLBOXRC}:
 - REGISTRY: The registry to pull from. Default: $REGISTRY
 - IMAGE: The image and tag from the registry to pull. Default: $IMAGE
 - TOOLBOX_NAME: The name to use for the local container. Default: $TOOLBOX_NAME
+- TOOLBOX_SHELL: Standard shell if no other commands are given. Default: $TOOLBOX_SHELL
 
 Example toolboxrc:
 REGISTRY=my.special.registry.example.com
 IMAGE=debug:latest
-TOOLBOX_NAME=special-debug-container"
+TOOLBOX_NAME=special-debug-container
+TOOLBOX_SHELL=/bin/bash"
 }
 
 main() {
@@ -163,10 +166,11 @@ main() {
 	SUDO=sudo
     fi
 
-    if [ ! -n "$*" ]; then
-	set /bin/sh "$@"
+    if [ -z "$*" ]; then
+	run ${TOOLBOX_SHELL}
+    else
+	run "$@"
     fi
-    run "$@"
     cleanup
 }
 
