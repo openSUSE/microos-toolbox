@@ -50,6 +50,8 @@ run() {
             container_runlabel
             return
         fi
+	# We want to do the user setup only when the container is created for the first time
+	[[ ! -z ${CREATE_AS_USER} ]] && SETUP_USER=true
     else
         echo "Container '$TOOLBOX_NAME' already exists. Trying to start..."
         echo "(To remove the container and start with a fresh toolbox, run: podman rm '$TOOLBOX_NAME')"
@@ -61,6 +63,17 @@ run() {
     elif [[ "$state" != running ]]; then
         echo "Container '$TOOLBOX_NAME' in unknown state: '$state'"
         return 1
+    fi
+
+    if [[ "${SETUP_USER}" = "true" ]]; then
+        echo "Setting up user '${USER_NAME}' inside the container..."
+        cat <<EOF > /tmp/${TOOLBOX_NAME}-user-setup.sh
+#!/bin/bash
+groupadd -g ${USER_GID} ${USER_GNAME} &> /dev/null
+useradd -M -N -g ${USER_GNAME} -u ${USER_ID} ${USER_NAME} &> /dev/null
+EOF
+        ${SUDO} podman cp /tmp/${TOOLBOX_NAME}-user-setup.sh ${TOOLBOX_NAME}:/tmp/user-setup.sh
+        ${SUDO} podman exec --user root ${TOOLBOX_NAME} bash /tmp/user-setup.sh
     fi
 
     echo "Container started successfully. To exit, type 'exit'."

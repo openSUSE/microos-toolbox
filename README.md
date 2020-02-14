@@ -33,6 +33,30 @@ Continue? [y/n/v/...? shows all options] (y):
 sh-5.0# vi /media/root/etc/passwd
 ```
 
+### Usage as user
+
+In case an proper user environment is what one wants (e.g., for development), the `-u` (or `--user`) option can be used:
+
+```
+$ id -a
+uid=1000(dario) gid=1000(dario) groups=1000(dario),...
+$ ./toolbox -u
+Spawning a container 'toolbox-dario-user' with image 'registry.opensuse.org/opensuse/toolbox'
+a0a5a332ee6d2a8dff6d8fb68a9ac70aeaacc9d531cf82f610ae48bec9e93ea1
+toolbox-dario-user
+Setting up user 'dario' inside the container...
+Container started successfully. To exit, type 'exit'.
+dario@toolbox:~>
+...
+dario@toolbox:~> id -a
+uid=1000(dario) gid=1000(dario) groups=1000(dario)
+dario@toolbox:~> echo $HOME
+/home/dario
+dario@toolbox:~> ls $HOME/.. -l
+total 0
+drwxr-xr-x 1 dario dario 2422 Feb 14 10:22 dario
+```
+
 ## Advanced Usage
 
 ### Use a custom image
