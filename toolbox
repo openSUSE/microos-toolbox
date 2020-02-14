@@ -157,14 +157,29 @@ main() {
     # Execute setup first so we get proper variables
     setup
     # If we are passed a help switch, show help and exit
-    if [[ "$1" =~ ^(--help|-h)$ ]]; then
-        show_help
-        exit 0
-    fi
-    if [[ "$1" =~ ^(--root|-r)$ ]]; then
-        shift
-	SUDO=sudo
-    fi
+    ARGS=`getopt -o hr --long help,root -n toolbox -- "$@"`
+    eval set -- "$ARGS"
+    while true; do
+        case "$1" in
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            -r|--root)
+                shift
+                SUDO=sudo
+                ;;
+            --)
+                shift
+                break
+                ;;
+            *)
+                echo "unknown parameter: '$1'"
+                show_help
+                exit 1
+                ;;
+        esac
+    done
 
     if [ -z "$*" ]; then
 	run ${TOOLBOX_SHELL}
