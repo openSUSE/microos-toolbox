@@ -45,6 +45,8 @@ Spawning a container 'toolbox-dario-user' with image 'registry.opensuse.org/open
 a0a5a332ee6d2a8dff6d8fb68a9ac70aeaacc9d531cf82f610ae48bec9e93ea1
 toolbox-dario-user
 Setting up user 'dario' inside the container...
+(NOTE that, if 'sudo' and related packages are not present in the image already,
+this may take some time. But this will only happen now that the toolbox is being created)
 Container started successfully. To exit, type 'exit'.
 dario@toolbox:~>
 ...
@@ -55,6 +57,36 @@ dario@toolbox:~> echo $HOME
 dario@toolbox:~> ls $HOME/.. -l
 total 0
 drwxr-xr-x 1 dario dario 2422 Feb 14 10:22 dario
+```
+
+The user will have (paswordless) `sudo` access so, e.g., packages can be installed, etc:
+
+```
+$ ./toolbox -u
+Spawning a container 'toolbox-dario-user' with image 'registry.opensuse.org/opensuse/toolbox'
+4a05e36edb55776ae5f32cb736529ba94bdea4a39a8e5d6258ca230f646da733
+toolbox-dario-user
+Setting up user 'dario' (with 'sudo' access) inside the container...
+(NOTE that, if 'sudo' and related packages are not present in the image already,
+this may take some time. But this will only happen now that the toolbox is being created)
+Container started successfully. To exit, type 'exit'.
+dario@toolbox:~>
+...
+dario@toolbox:~> sudo zypper install gcc
+Loading repository data...
+Reading installed packages...
+Resolving package dependencies...
+
+The following 17 NEW packages are going to be installed:
+  binutils cpp cpp9 gcc gcc9 glibc-devel libasan5 libatomic1 libgomp1 libisl22 libitm1 liblsan0 libmpc3 libtsan0 libubsan1 libxcrypt-devel linux-glibc-devel
+
+17 new packages to install.
+Overall download size: 42.6 MiB. Already cached: 0 B. After the operation, additional 179.7 MiB will be used.
+Continue? [y/n/v/...? shows all options] (y):
+...
+dario@toolbox:~> gcc
+gcc: fatal error: no input files
+compilation terminated.
 ```
 
 ## Advanced Usage
