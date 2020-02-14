@@ -149,7 +149,7 @@ container_exec() {
 }
 
 show_help() {
-    echo "USAGE: toolbox [[-h/--help] | [-r/--root] [-u/--user] [command]]
+    echo "USAGE: toolbox [[-h/--help] | [-r/--root] [-u/--user] [-t/--tag <tag>] [command]]
 toolbox is a small script that launches a container to let you bring in your favorite debugging or admin tools.
 The toolbox container is a pet container and will be restarted on following runs.
 To remove the container and start fresh, do podman rm ${TOOLBOX_NAME}.
@@ -158,6 +158,7 @@ Options:
   -h/--help: Shows this help message
   -u/--user: Run as the current user inside the container
   -r/--root: Runs podman via sudo as root
+  -t/--tag <tag>: Add <tag> to the toolbox name
 
 You may override the following variables by setting them in ${TOOLBOXRC}:
 - REGISTRY: The registry to pull from. Default: $REGISTRY
@@ -176,7 +177,7 @@ main() {
     # Execute setup first so we get proper variables
     setup
     # If we are passed a help switch, show help and exit
-    ARGS=`getopt -o hru --long help,root,user -n toolbox -- "$@"`
+    ARGS=`getopt -o hrut: --long help,root,user,tag: -n toolbox -- "$@"`
     eval set -- "$ARGS"
     while true; do
         case "$1" in
@@ -200,6 +201,10 @@ main() {
                 # can modify the user's name, groups, etc, within the container.
                 CREATE_AS_USER="--pid host --userns=keep-id -v ${HOME}:${HOME} --user root:root -w `pwd`"
                 EXEC_AS_USER="--user ${USER_ID}:${USER_GID}"
+                ;;
+            -t|--tag)
+                TOOLBOX_NAME="${TOOLBOX_NAME}-$2"
+                shift 2
                 ;;
             --)
                 shift

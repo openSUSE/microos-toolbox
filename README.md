@@ -107,6 +107,37 @@ IMAGE=opensuse/toolbox:latest
 
 toolbox called by a normal user will start the toolbox container, too, but the root filesystem cannot be modified. Running toolbox with sudo has the disadvantage, that the .toolboxrc from root and not the user is used. To run the toolbox container with root rights, `toolbox --root` has to be used.
 
+### Multiple Toolboxes
+
+It is possible to want to create multiple toolboxes, especially user ones. For instance, one may want to create a special user toolbox, inside which doing development of virtualization related projects. This is possible by adding a tag to a toolbox name, via the `toolbox --tag <tag>` option:
+
+```
+$ podman ps --all
+CONTAINER ID  IMAGE                                                             COMMAND               CREATED             STATUS                         PORTS  NAMES
+b20985e6de68  registry.opensuse.org/opensuse/toolbox:latest                     /bin/bash             57 seconds ago      Exited (0) 3 seconds ago              toolbox-dario-user
+...
+$ ./toolbox -u
+Container 'toolbox-dario-user' already exists. Trying to start...
+(To remove the container and start with a fresh toolbox, run: podman rm 'toolbox-dario-user')
+toolbox-dario-user
+Container started successfully. To exit, type 'exit'.
+...
+$ ./toolbox -u -t virt
+Spawning a container 'toolbox-dario-user-virt' with image 'registry.opensuse.org/opensuse/toolbox'
+0dbfbe02b0201bee9ae3a53c66db70ab621eae914c013e0b2e7a34837adde527
+toolbox-dario-user-virt
+Setting up user 'dario' (with 'sudo' access) inside the container...
+(NOTE that, if 'sudo' and related packages are not present in the image already,
+this may take some time. But this will only happen now that the toolbox is being created)
+Container started successfully. To exit, type 'exit'.
+dario@toolbox:~>
+...
+dario@toolbox:~> exit
+CONTAINER ID  IMAGE                                                             COMMAND               CREATED         STATUS                    PORTS  NAMES
+0dbfbe02b020  registry.opensuse.org/opensuse/toolbox:latest                     /bin/bash             8 minutes ago   Exited (0) 6 minutes ago         toolbox-dario-user-virt
+b20985e6de68  registry.opensuse.org/opensuse/toolbox:latest                     /bin/bash             10 minutes ago  Exited (0) 7 minutes ago         toolbox-dario-user
+```
+
 ### Automatically enter toolbox on login
 
 Set an `/etc/passwd` entry for one of the users to `/usr/bin/toolbox`:
