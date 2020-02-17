@@ -33,6 +33,62 @@ Continue? [y/n/v/...? shows all options] (y):
 sh-5.0# vi /media/root/etc/passwd
 ```
 
+### Usage as user
+
+In case an proper user environment is what one wants (e.g., for development), the `-u` (or `--user`) option can be used:
+
+```
+$ id -a
+uid=1000(dario) gid=1000(dario) groups=1000(dario),...
+$ ./toolbox -u
+Spawning a container 'toolbox-dario-user' with image 'registry.opensuse.org/opensuse/toolbox'
+a0a5a332ee6d2a8dff6d8fb68a9ac70aeaacc9d531cf82f610ae48bec9e93ea1
+toolbox-dario-user
+Setting up user 'dario' inside the container...
+(NOTE that, if 'sudo' and related packages are not present in the image already,
+this may take some time. But this will only happen now that the toolbox is being created)
+Container started successfully. To exit, type 'exit'.
+dario@toolbox:~>
+...
+dario@toolbox:~> id -a
+uid=1000(dario) gid=1000(dario) groups=1000(dario)
+dario@toolbox:~> echo $HOME
+/home/dario
+dario@toolbox:~> ls $HOME/.. -l
+total 0
+drwxr-xr-x 1 dario dario 2422 Feb 14 10:22 dario
+```
+
+The user will have (paswordless) `sudo` access so, e.g., packages can be installed, etc:
+
+```
+$ ./toolbox -u
+Spawning a container 'toolbox-dario-user' with image 'registry.opensuse.org/opensuse/toolbox'
+4a05e36edb55776ae5f32cb736529ba94bdea4a39a8e5d6258ca230f646da733
+toolbox-dario-user
+Setting up user 'dario' (with 'sudo' access) inside the container...
+(NOTE that, if 'sudo' and related packages are not present in the image already,
+this may take some time. But this will only happen now that the toolbox is being created)
+Container started successfully. To exit, type 'exit'.
+dario@toolbox:~>
+...
+dario@toolbox:~> sudo zypper install gcc
+Loading repository data...
+Reading installed packages...
+Resolving package dependencies...
+
+The following 17 NEW packages are going to be installed:
+  binutils cpp cpp9 gcc gcc9 glibc-devel libasan5 libatomic1 libgomp1 libisl22 libitm1 liblsan0 libmpc3 libtsan0 libubsan1 libxcrypt-devel linux-glibc-devel
+
+17 new packages to install.
+Overall download size: 42.6 MiB. Already cached: 0 B. After the operation, additional 179.7 MiB will be used.
+Continue? [y/n/v/...? shows all options] (y):
+...
+dario@toolbox:~> gcc
+gcc: fatal error: no input files
+compilation terminated.
+```
+
 ## Advanced Usage
 
 ### Use a custom image
@@ -50,6 +106,37 @@ IMAGE=opensuse/toolbox:latest
 ### Root container as normal user
 
 toolbox called by a normal user will start the toolbox container, too, but the root filesystem cannot be modified. Running toolbox with sudo has the disadvantage, that the .toolboxrc from root and not the user is used. To run the toolbox container with root rights, `toolbox --root` has to be used.
+
+### Multiple Toolboxes
+
+It is possible to want to create multiple toolboxes, especially user ones. For instance, one may want to create a special user toolbox, inside which doing development of virtualization related projects. This is possible by adding a tag to a toolbox name, via the `toolbox --tag <tag>` option:
+
+```
+$ podman ps --all
+CONTAINER ID  IMAGE                                                             COMMAND               CREATED             STATUS                         PORTS  NAMES
+b20985e6de68  registry.opensuse.org/opensuse/toolbox:latest                     /bin/bash             57 seconds ago      Exited (0) 3 seconds ago              toolbox-dario-user
+...
+$ ./toolbox -u
+Container 'toolbox-dario-user' already exists. Trying to start...
+(To remove the container and start with a fresh toolbox, run: podman rm 'toolbox-dario-user')
+toolbox-dario-user
+Container started successfully. To exit, type 'exit'.
+...
+$ ./toolbox -u -t virt
+Spawning a container 'toolbox-dario-user-virt' with image 'registry.opensuse.org/opensuse/toolbox'
+0dbfbe02b0201bee9ae3a53c66db70ab621eae914c013e0b2e7a34837adde527
+toolbox-dario-user-virt
+Setting up user 'dario' (with 'sudo' access) inside the container...
+(NOTE that, if 'sudo' and related packages are not present in the image already,
+this may take some time. But this will only happen now that the toolbox is being created)
+Container started successfully. To exit, type 'exit'.
+dario@toolbox:~>
+...
+dario@toolbox:~> exit
+CONTAINER ID  IMAGE                                                             COMMAND               CREATED         STATUS                    PORTS  NAMES
+0dbfbe02b020  registry.opensuse.org/opensuse/toolbox:latest                     /bin/bash             8 minutes ago   Exited (0) 6 minutes ago         toolbox-dario-user-virt
+b20985e6de68  registry.opensuse.org/opensuse/toolbox:latest                     /bin/bash             10 minutes ago  Exited (0) 7 minutes ago         toolbox-dario-user
+```
 
 ### Automatically enter toolbox on login
 

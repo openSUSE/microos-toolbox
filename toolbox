@@ -50,6 +50,8 @@ run() {
             container_runlabel
             return
         fi
+	# We want to do the user setup only when the container is created for the first time
+	[[ ! -z ${CREATE_AS_USER} ]] && SETUP_USER=true
     else
         echo "Container '$TOOLBOX_NAME' already exists. Trying to start..."
         echo "(To remove the container and start with a fresh toolbox, run: podman rm '$TOOLBOX_NAME')"
@@ -61,6 +63,22 @@ run() {
     elif [[ "$state" != running ]]; then
         echo "Container '$TOOLBOX_NAME' in unknown state: '$state'"
         return 1
+    fi
+
+    if [[ "${SETUP_USER}" = "true" ]]; then
+        echo "Setting up user '${USER_NAME}' (with 'sudo' access) inside the container..."
+        echo "(NOTE that, if 'sudo' and related packages are not present in the image already,"
+        echo "this may take some time. But this will only happen now that the toolbox is being created)"
+        cat <<EOF > /tmp/${TOOLBOX_NAME}-user-setup.sh
+#!/bin/bash
+groupadd -g ${USER_GID} ${USER_GNAME} &> /dev/null
+useradd -M -N -g ${USER_GNAME} -u ${USER_ID} ${USER_NAME} &> /dev/null
+zypper install -y --no-recommends sudo system-group-wheel &> /dev/null
+echo "%wheel ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/wheel 2> /dev/null
+usermod -G wheel -a ${USER_NAME} &> /dev/null
+EOF
+        ${SUDO} podman cp /tmp/${TOOLBOX_NAME}-user-setup.sh ${TOOLBOX_NAME}:/tmp/user-setup.sh
+        ${SUDO} podman exec --user root ${TOOLBOX_NAME} bash /tmp/user-setup.sh
     fi
 
     echo "Container started successfully. To exit, type 'exit'."
@@ -98,7 +116,7 @@ container_create() {
                  --network host \
                  --privileged \
                  --security-opt label=disable \
-                 --tty \
+                 --tty ${CREATE_AS_USER} \
                  --volume /:/media/root:rslave \
                  "$TOOLBOX_IMAGE" 2>&1; then
         echo "$0: failed to create container '$TOOLBOX_NAME'"
@@ -125,20 +143,22 @@ container_exec() {
             --env LANG="$LANG" \
             --env TERM="$TERM" \
             --interactive \
-            --tty \
+            --tty ${EXEC_AS_USER} \
             "$TOOLBOX_NAME" \
             "$@"
 }
 
 show_help() {
-    echo "USAGE: toolbox [-h/--help]|[-r/--root] [command]
+    echo "USAGE: toolbox [[-h/--help] | [-r/--root] [-u/--user] [-t/--tag <tag>] [command]]
 toolbox is a small script that launches a container to let you bring in your favorite debugging or admin tools.
 The toolbox container is a pet container and will be restarted on following runs.
 To remove the container and start fresh, do podman rm ${TOOLBOX_NAME}.
 
 Options:
   -h/--help: Shows this help message
+  -u/--user: Run as the current user inside the container
   -r/--root: Runs podman via sudo as root
+  -t/--tag <tag>: Add <tag> to the toolbox name
 
 You may override the following variables by setting them in ${TOOLBOXRC}:
 - REGISTRY: The registry to pull from. Default: $REGISTRY
@@ -157,14 +177,46 @@ main() {
     # Execute setup first so we get proper variables
     setup
     # If we are passed a help switch, show help and exit
-    if [[ "$1" =~ ^(--help|-h)$ ]]; then
-        show_help
-        exit 0
-    fi
-    if [[ "$1" =~ ^(--root|-r)$ ]]; then
-        shift
-	SUDO=sudo
-    fi
+    ARGS=`getopt -o hrut: --long help,root,user,tag: -n toolbox -- "$@"`
+    eval set -- "$ARGS"
+    while true; do
+        case "$1" in
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            -r|--root)
+                shift
+                SUDO=sudo
+                ;;
+            -u|--user)
+                shift
+                USER_ID=`id -u`; USER_GID=`id -g`
+                USER_NAME=`id -un` ; USER_GNAME=`id -gn`
+                USER_HOME=$HOME
+                TOOLBOX_NAME="${TOOLBOX_NAME}-user"
+
+                # We want to keep the pid namespace of the running user.
+                # We, however, use root:root while creating, so that later we
+                # can modify the user's name, groups, etc, within the container.
+                CREATE_AS_USER="--pid host --userns=keep-id -v ${HOME}:${HOME} --user root:root -w `pwd`"
+                EXEC_AS_USER="--user ${USER_ID}:${USER_GID}"
+                ;;
+            -t|--tag)
+                TOOLBOX_NAME="${TOOLBOX_NAME}-$2"
+                shift 2
+                ;;
+            --)
+                shift
+                break
+                ;;
+            *)
+                echo "unknown parameter: '$1'"
+                show_help
+                exit 1
+                ;;
+        esac
+    done
 
     if [ -z "$*" ]; then
 	run ${TOOLBOX_SHELL}
