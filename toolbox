@@ -115,10 +115,10 @@ container_create() {
                  --name "$TOOLBOX_NAME" \
                  --network host \
                  --privileged \
-                 --security-opt label=disable \
-                 --tty ${CREATE_AS_USER} \
+                 --security-opt label=disable ${CREATE_AS_USER} \
                  --volume /:/media/root:rslave \
-                 "$TOOLBOX_IMAGE" 2>&1; then
+		 --volume /dev:/dev:rslave \
+                 "$TOOLBOX_IMAGE" sleep +Inf 2>&1; then
         echo "$0: failed to create container '$TOOLBOX_NAME'"
         exit 1
     fi
