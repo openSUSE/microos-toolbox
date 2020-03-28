@@ -199,8 +199,8 @@ main() {
                 # We want to keep the pid namespace of the running user.
                 # We, however, use root:root while creating, so that later we
                 # can modify the user's name, groups, etc, within the container.
-                CREATE_AS_USER="--pid host --userns=keep-id -v ${HOME}:${HOME} --user root:root -w `pwd`"
-                EXEC_AS_USER="--user ${USER_ID}:${USER_GID}"
+                CREATE_AS_USER="--pid host --userns=keep-id -v ${HOME}:${HOME} --user root:root"
+                EXEC_AS_USER="--user ${USER_ID}:${USER_GID} -w `pwd`"
                 ;;
             -t|--tag)
                 TOOLBOX_NAME="${TOOLBOX_NAME}-$2"
