@@ -200,7 +200,7 @@ main() {
                 # We, however, use root:root while creating, so that later we
                 # can modify the user's name, groups, etc, within the container.
                 CREATE_AS_USER="--pid host --userns=keep-id -v ${HOME}:${HOME} --user root:root --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave "
-                EXEC_AS_USER="--user ${USER_ID}:${USER_GID} -w `pwd` --env SSH_AUTH_SOCK=$SSH_AUTH_SOCK"
+                EXEC_AS_USER="--user ${USER_ID}:${USER_GID} -w `pwd` --env SSH_AUTH_SOCK=$SSH_AUTH_SOCK --env DISPLAY=$DISPLAY --env XAUTHORITY=$XAUTHORITY"
                 ;;
             -t|--tag)
                 TOOLBOX_NAME="${TOOLBOX_NAME}-$2"
