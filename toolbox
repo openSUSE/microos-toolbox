@@ -177,7 +177,7 @@ main() {
     # Execute setup first so we get proper variables
     setup
     # If we are passed a help switch, show help and exit
-    ARGS=`getopt -o hrut: --long help,root,user,tag: -n toolbox -- "$@"`
+    ARGS=`getopt -o hrut:R:I: --long help,root,user,tag:,registry:,image: -n toolbox -- "$@"`
     eval set -- "$ARGS"
     while true; do
         case "$1" in
@@ -204,6 +204,18 @@ main() {
                 ;;
             -t|--tag)
                 TOOLBOX_NAME="${TOOLBOX_NAME}-$2"
+                shift 2
+                ;;
+            -R|--registry)
+                REGISTRY=$2
+                # Let's rebuild the image URI (this means that command
+                # line, if present, overrides config file)
+                TOOLBOX_IMAGE="${REGISTRY}"/"${IMAGE}"
+                shift 2
+                ;;
+            -I|--image)
+                IMAGE=$2
+                TOOLBOX_IMAGE="${REGISTRY}"/"${IMAGE}"
                 shift 2
                 ;;
             --)
