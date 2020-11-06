@@ -73,7 +73,7 @@ run() {
 #!/bin/bash
 groupadd -g ${USER_GID} ${USER_GNAME} &> /dev/null
 useradd -M -N -g ${USER_GNAME} -u ${USER_ID} ${USER_NAME} &> /dev/null
-zypper install -y --no-recommends sudo system-group-wheel &> /dev/null
+getent group wheel >/dev/null || zypper install -y --no-recommends sudo system-group-wheel &> /dev/null
 echo "%wheel ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/wheel 2> /dev/null
 usermod -G wheel -a ${USER_NAME} &> /dev/null
 EOF
