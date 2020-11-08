@@ -1,9 +1,29 @@
 # toolbox - bring your own tools with you
 
-On systems using `transactional-update` it is not really possible due to the read-only root filesystem to install tools to analyze problems in the currently running system, a reboot is always required. Which makes it next to impossible to debug such problems.
-`toolbox` is a small script that launches a container to let you bring in your favorite debugging or admin tools in such a system. The root filesystem can be found at `/media/root`.
+On systems using `transactional-update` it is not really possible - due to the read-only root filesystem - to install tools to analyze problems in the currently running system as a reboot is always required. This makes it next to impossible to debug such problems.
+`toolbox` is a small script that launches a podman container in a rootles or rootfull state to let you bring in your favorite debugging or admin tools in such a system. You can also install and run GUI applications in your `toolbox` container. The root filesystem can be found at `/media/root`.
 
-## Usage
+## Usage     
+     
+The following options are avialbe in `toolbox`:
+* `-h` or `--help`: Shows the help message
+* `-u` or `--user`: Run as the current user inside the container
+* `-r` or `--root`: Runs podman via sudo as root
+* `-t` or `--tag` <tag>: Add <tag> to the toolbox name
+    
+You may override the following variables by setting them in ${TOOLBOXRC}:
+* REGISTRY: The registry to pull from. Default value is: `registry.opensuse.org`.
+* IMAGE: The image and tag from the registry to pull. Default value is: `opensuse/toolbox`.
+* TOOLBOX_NAME: The name to use for the local container. Default value is: `"${HOME}"/.toolboxrc`.
+* TOOLBOX_SHELL: Standard shell if no other commands are given. Default value is: `/bin/bash`.
+
+Example toolboxrc:
+* `REGISTRY`=my.special.registry.example.com
+* `IMAGE`=debug:latest
+* `TOOLBOX_NAME`=special-debug-container
+* `TOOLBOX_SHELL`=/bin/bash"
+
+### Rootfull Usage Example
 
 ```
 $ /usr/bin/toolbox
@@ -33,9 +53,11 @@ Continue? [y/n/v/...? shows all options] (y):
 sh-5.0# vi /media/root/etc/passwd
 ```
 
-### Usage as user
+## Rootless Usage 
 
-In case an proper user environment is what one wants (e.g., for development), the `-u` (or `--user`) option can be used:
+In case a proper user environment is what one wants (e.g., for development), the `-u` (or `--user`) option can be used:
+
+### Rootless Usage Example
 
 ```
 $ id -a
