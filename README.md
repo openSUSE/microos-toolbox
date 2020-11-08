@@ -1,7 +1,7 @@
 # toolbox - bring your own tools with you
 
 On systems using `transactional-update` it is not really possible - due to the read-only root filesystem - to install tools to analyze problems in the currently running system as a reboot is always required. This makes it next to impossible to debug such problems.
-`toolbox` is a small script that launches a podman container in a `rootless` or `rootfull` state to let you bring in your favorite debugging or admin tools in such a system. You can also install and run GUI applications in your `toolbox` container. The root filesystem can be found at `/media/root`.
+`toolbox` is a small script that launches a podman container in a rootless or rootfull state to let you bring in your favorite debugging or admin tools in such a system. You can also install and run GUI applications in your `toolbox` container. The root filesystem can be found at `/media/root`.
 
 ## Usage     
      
@@ -12,10 +12,10 @@ The following options are avialbe in `toolbox`:
 * `-t` or `--tag` <tag>: Add <tag> to the toolbox name
     
 You may override the following variables by setting them in ${TOOLBOXRC}:
-* `REGISTRY`: The registry to pull from. Default value is: `registry.opensuse.org`.
-* `IMAGE`: The image and tag from the registry to pull. Default value is: `opensuse/toolbox`.
-* `TOOLBOX_NAME`: The name to use for the local container. Default value is: `"${HOME}"/.toolboxrc`.
-* `TOOLBOX_SHELL`: Standard shell if no other commands are given. Default value is: `/bin/bash`.
+* REGISTRY: The registry to pull from. Default value is: `registry.opensuse.org`.
+* IMAGE: The image and tag from the registry to pull. Default value is: `opensuse/toolbox`.
+* TOOLBOX_NAME: The name to use for the local container. Default value is: `"${HOME}"/.toolboxrc`.
+* TOOLBOX_SHELL: Standard shell if no other commands are given. Default value is: `/bin/bash`.
 
 Example toolboxrc:
 * `REGISTRY`=my.special.registry.example.com
@@ -180,3 +180,13 @@ toolbox-bob
 Container started successfully. To exit, type 'exit'.
 sh-5.0#
 ```
+
+## Troubleshooting
+
+#### Podman can't pull/run images with user
+If you want to run a rootless `toolbox` setup you might need to add a range of UID and GID for the user you want to run `toolbox` with. Before adding UID and GID ranges check if `/etc/subuid` and `/etc/subgid` are actually empty. If empty you can run this as root to populate them:      
+```echo "podman_user:100000:65536" > /etc/subuid
+echo "podman_user:100000:65536" > /etc/subgid```     
+     
+#### GUI application can't connect to display 
+This happens if you run the container as root - with sudo for example - while you're logged in as user to the desktop environment. The easiest way is to use `toolbox -u` with your user to setup a `rootless toolbox`  container for such cases. 
