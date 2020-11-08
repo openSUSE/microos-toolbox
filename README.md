@@ -184,9 +184,10 @@ sh-5.0#
 ## Troubleshooting
 
 #### Podman can't pull/run images with user
-If you want to run a rootless `toolbox` setup you might need to add a range of UID and GID for the user you want to run `toolbox` with. Before adding UID and GID ranges check if `/etc/subuid` and `/etc/subgid` are actually empty. If empty you can run this as root to populate them:      
-```echo "podman_user:100000:65536" > /etc/subuid
-echo "podman_user:100000:65536" > /etc/subgid```     
-     
+If you want to run a rootless `toolbox` setup you might need to add a range of UID and GID for the user you want to run `toolbox` with. Before adding UID and GID ranges check if `/etc/subuid` and `/etc/subgid` are actually empty. If empty you can run this as root to populate them:   
+```
+echo "podman_user:100000:65536" > /etc/subuid
+echo "podman_user:100000:65536" > /etc/subgid
+```
 #### GUI application can't connect to display 
 This happens if you run the container as root - with sudo for example - while you're logged in as user to the desktop environment. The easiest way is to use `toolbox -u` with your user to setup a `rootless toolbox`  container for such cases. 
