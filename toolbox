@@ -69,7 +69,8 @@ run() {
         echo "Setting up user '${USER_NAME}' (with 'sudo' access) inside the container..."
         echo "(NOTE that, if 'sudo' and related packages are not present in the image already,"
         echo "this may take some time. But this will only happen now that the toolbox is being created)"
-        cat <<EOF > /tmp/${TOOLBOX_NAME}-user-setup.sh
+        local tmp_user_setup=`mktemp ${HOME}/.${TOOLBOX_NAME}-user-setup-XXXXXX.sh`
+        cat <<EOF > ${tmp_user_setup}
 #!/bin/bash
 groupadd -g ${USER_GID} ${USER_GNAME} &> /dev/null
 useradd -M -N -g ${USER_GNAME} -u ${USER_ID} ${USER_NAME} &> /dev/null
@@ -77,8 +78,9 @@ getent group wheel >/dev/null || zypper install -y --no-recommends sudo system-g
 echo "%wheel ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/wheel 2> /dev/null
 usermod -G wheel -a ${USER_NAME} &> /dev/null
 EOF
-        ${SUDO} podman cp /tmp/${TOOLBOX_NAME}-user-setup.sh ${TOOLBOX_NAME}:/tmp/user-setup.sh
-        ${SUDO} podman exec --user root ${TOOLBOX_NAME} bash /tmp/user-setup.sh
+        ${SUDO} podman cp ${tmp_user_setup} ${TOOLBOX_NAME}:${tmp_user_setup}
+        ${SUDO} podman exec --user root ${TOOLBOX_NAME} bash ${tmp_user_setup}
+        ${SUDO} podman exec --user root ${TOOLBOX_NAME} rm ${tmp_user_setup}
     fi
 
     echo "Container started successfully. To exit, type 'exit'."
