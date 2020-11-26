@@ -69,16 +69,18 @@ run() {
         echo "Setting up user '${USER_NAME}' (with 'sudo' access) inside the container..."
         echo "(NOTE that, if 'sudo' and related packages are not present in the image already,"
         echo "this may take some time. But this will only happen now that the toolbox is being created)"
-        cat <<EOF > /tmp/${TOOLBOX_NAME}-user-setup.sh
+        local tmp_user_setup=`mktemp ${HOME}/.${TOOLBOX_NAME}-user-setup-XXXXXX.sh`
+        cat <<EOF > ${tmp_user_setup}
 #!/bin/bash
 groupadd -g ${USER_GID} ${USER_GNAME} &> /dev/null
 useradd -M -N -g ${USER_GNAME} -u ${USER_ID} ${USER_NAME} &> /dev/null
-zypper install -y --no-recommends sudo system-group-wheel &> /dev/null
+getent group wheel >/dev/null || zypper install -y --no-recommends sudo system-group-wheel &> /dev/null
 echo "%wheel ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/wheel 2> /dev/null
 usermod -G wheel -a ${USER_NAME} &> /dev/null
 EOF
-        ${SUDO} podman cp /tmp/${TOOLBOX_NAME}-user-setup.sh ${TOOLBOX_NAME}:/tmp/user-setup.sh
-        ${SUDO} podman exec --user root ${TOOLBOX_NAME} bash /tmp/user-setup.sh
+        ${SUDO} podman cp ${tmp_user_setup} ${TOOLBOX_NAME}:${tmp_user_setup}
+        ${SUDO} podman exec --user root ${TOOLBOX_NAME} bash ${tmp_user_setup}
+        ${SUDO} podman exec --user root ${TOOLBOX_NAME} rm ${tmp_user_setup}
     fi
 
     echo "Container started successfully. To exit, type 'exit'."
@@ -177,7 +179,7 @@ main() {
     # Execute setup first so we get proper variables
     setup
     # If we are passed a help switch, show help and exit
-    ARGS=`getopt -o hrut: --long help,root,user,tag: -n toolbox -- "$@"`
+    ARGS=`getopt -o hrut:R:I: --long help,root,user,tag:,registry:,image: -n toolbox -- "$@"`
     eval set -- "$ARGS"
     while true; do
         case "$1" in
@@ -204,6 +206,18 @@ main() {
                 ;;
             -t|--tag)
                 TOOLBOX_NAME="${TOOLBOX_NAME}-$2"
+                shift 2
+                ;;
+            -R|--registry)
+                REGISTRY=$2
+                # Let's rebuild the image URI (this means that command
+                # line, if present, overrides config file)
+                TOOLBOX_IMAGE="${REGISTRY}"/"${IMAGE}"
+                shift 2
+                ;;
+            -I|--image)
+                IMAGE=$2
+                TOOLBOX_IMAGE="${REGISTRY}"/"${IMAGE}"
                 shift 2
                 ;;
             --)

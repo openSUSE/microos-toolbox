@@ -8,6 +8,8 @@ On systems using `transactional-update` it is not really possible - due to the r
 The following options are avialbe in `toolbox`:
 * `-h` or `--help`: Shows the help message
 * `-u` or `--user`: Run as the current user inside the container
+* `-R` or `--registry` `<registry>`: Explicitly specify the registry to use
+* `-I` or `--image` `<image>`: Explicitly specify the image to pull
 * `-r` or `--root`: Runs podman via sudo as root
 * `-t` or `--tag` <tag>: Add <tag> to the toolbox name
     
@@ -22,6 +24,9 @@ Example toolboxrc:
 * `IMAGE`=debug:latest
 * `TOOLBOX_NAME`=special-debug-container
 * `TOOLBOX_SHELL`=/bin/bash"
+
+If a config file is found, with REGISTRY and IMAGE defined, "${REGISTRY}/${IMAGE}" is used, overriding the default.
+If -R and/or -I is/are used they override both the defaults and the content of REGISTRY and/or IMAGE from the config file.
 
 ### Rootfull Usage Example
 
