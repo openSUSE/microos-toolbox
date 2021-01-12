@@ -223,7 +223,7 @@ main() {
                 # We want to keep the pid namespace of the running user.
                 # We, however, use root:root while creating, so that later we
                 # can modify the user's name, groups, etc, within the container.
-                CREATE_AS_USER="--pid host --userns=keep-id -v ${HOME}:${HOME} --user root:root --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave "
+                CREATE_AS_USER="--pid host --userns=keep-id -v ${HOME}:${HOME} --user root:root --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave --volume /run/media/:/run/media/:rslave --volume /tmp:/tmp:rslave"
                 for ENV in $USER_ENV ; do
                     eval VAL="$""$ENV"
                     [[ ! -z $VAL ]] && USER_ENV_STR="$USER_ENV_STR --env $ENV=$VAL"
