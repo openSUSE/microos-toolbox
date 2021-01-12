@@ -28,6 +28,26 @@ SUDO=
 
 test -f /etc/toolboxrc && . /etc/toolboxrc
 
+USER_ENV="DBUS_SESSION_BUS_ADDRESS \
+    DBUS_SYSTEM_BUS_ADDRESS \
+    DESKTOP_SESSION \
+    SESSION_MANAGER \
+    DISPLAY \
+    LANG \
+    SSH_AUTH_SOCK \
+    USER \
+    USERNAME \
+    WAYLAND_DISPLAY \
+    XAUTHORITY \
+    XAUTHLOCALHOSTNAME \
+    XDG_CURRENT_DESKTOP \
+    XDG_DATA_DIRS \
+    XDG_MENU_PREFIX \
+    XDG_RUNTIME_DIR \
+    XDG_SESSION_CLASS \
+    XDG_SESSION_DESKTOP \
+    XDG_SESSION_TYPE"
+
 setup() {
     # Allow user overrides
     if [ -f "${TOOLBOXRC}" ]; then
@@ -204,7 +224,11 @@ main() {
                 # We, however, use root:root while creating, so that later we
                 # can modify the user's name, groups, etc, within the container.
                 CREATE_AS_USER="--pid host --userns=keep-id -v ${HOME}:${HOME} --user root:root --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave "
-                EXEC_AS_USER="--user ${USER_ID}:${USER_GID} -w `pwd` --env SSH_AUTH_SOCK=$SSH_AUTH_SOCK --env DISPLAY=$DISPLAY --env XAUTHORITY=$XAUTHORITY"
+                for ENV in $USER_ENV ; do
+                    eval VAL="$""$ENV"
+                    [[ ! -z $VAL ]] && USER_ENV_STR="$USER_ENV_STR --env $ENV=$VAL"
+                done
+                EXEC_AS_USER="--user ${USER_ID}:${USER_GID} -w `pwd` $USER_ENV_STR"
                 ;;
             -t|--tag)
                 TOOLBOX_NAME="${TOOLBOX_NAME}-$2"
