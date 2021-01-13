@@ -187,7 +187,9 @@ container_exec() {
 }
 
 show_help() {
-    echo "USAGE: toolbox [[-h/--help] | [command] [-r/--root] [-u/--user] [-t/--tag <tag>] [command_to_run]]
+    echo "USAGE: toolbox [[-h/--help] | [command] [-r/--root] [-u/--user]
+        [[-R/--reg <registry>] [-I/--img <image>]|[-i/--image <image_URI>]]
+        [[-t/--tag <tag>]|[-c/--container <name>]] [command_to_run]]
 toolbox is a small script that launches a container to let you bring in your favorite debugging or admin tools.
 The toolbox container is a pet container and will be restarted on following runs.
 To remove the container and start fresh, do podman rm ${TOOLBOX_NAME}.
@@ -203,6 +205,12 @@ Options:
   -u/--user: Run as the current user inside the container
   -r/--root: Runs podman via sudo as root
   -t/--tag <tag>: Add <tag> to the toolbox name
+  -c/--container <name>: Set the name of the toolbox to be equal to <name>
+                         (use this alternatively to -t)
+  -R/--reg <registry>: Pulls the container image from <registry>
+  -I/--img <image>: Pulls the image called <image>
+  -i/--image <image_URI>: Pulls <image_URI> as a container image (use this
+                          alternatively to -R and -I)
 
 You may override the following variables by setting them in ${TOOLBOXRC}:
 - REGISTRY: The registry to pull from. Default: $REGISTRY
@@ -248,7 +256,7 @@ main() {
         esac
     fi
 
-    ARGS=`getopt -o hrut:R:I: --long help,root,user,tag:,registry:,image: -n toolbox -- "$@"`
+    ARGS=`getopt -o hrut:R:I:c:i: --long help,root,user,tag:,reg:,img:,container:,image: -n toolbox -- "$@"`
     eval set -- "$ARGS"
     while true; do
         case "$1" in
@@ -265,20 +273,36 @@ main() {
                 shift
 		MODE="user"
                 ;;
+            -c|--container)
+                if [ ! -z $TAG ]; then
+                    echo "ERROR: Don't use both -c and -t!"
+                    show_help
+                    exit 1
+                fi
+                CHANGE_NAME="true"
+                TOOLBOX_NAME="$2"
+                shift 2
+                ;;
             -t|--tag)
+                if [ ! -z $CHANGE_NAME ]; then
+                    echo "ERROR: Don't use both -c and -t!"
+                    show_help
+                    exit 1
+                fi
                 TAG="$2"
                 shift 2
                 ;;
-            -R|--registry)
+            -R|--reg)
                 REGISTRY=$2
-                # Let's rebuild the image URI (this means that command
-                # line, if present, overrides config file)
-                TOOLBOX_IMAGE="${REGISTRY}"/"${IMAGE}"
                 shift 2
                 ;;
-            -I|--image)
+            -I|--img)
                 IMAGE=$2
-                TOOLBOX_IMAGE="${REGISTRY}"/"${IMAGE}"
+                shift 2
+                ;;
+            -i|--image)
+                REGISTRY=""
+                IMAGE=$2
                 shift 2
                 ;;
             --)
@@ -293,11 +317,17 @@ main() {
         esac
     done
 
+    # Let's rebuild the image URI (this means that command
+    # line, if present, overrides config file)
+    TOOLBOX_IMAGE=`echo "${REGISTRY}"/"${IMAGE}" | sed 's/^\///g'`
+
     if [ "$MODE" = "user" ]; then
         USER_ID=`id -u`; USER_GID=`id -g`
         USER_NAME=`id -un` ; USER_GNAME=`id -gn`
         USER_HOME=$HOME
-        TOOLBOX_NAME="${TOOLBOX_NAME}-user"
+	if [ -z $CHANGE_NAME ]; then
+            TOOLBOX_NAME="${TOOLBOX_NAME}-user"
+        fi
 
         # We want to keep the pid namespace of the running user.
         # We, however, use root:root while creating, so that later we
