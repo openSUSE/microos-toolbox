@@ -19,12 +19,25 @@ set -eo pipefail
 trap cleanup EXIT
 
 # Defaults
-REGISTRY=registry.opensuse.org
-IMAGE=opensuse/toolbox
 TOOLBOX_NAME=toolbox-"${USER}"
 TOOLBOXRC="${HOME}"/.toolboxrc
 TOOLBOX_SHELL="/bin/bash"
 SUDO=
+MY_OS=None
+
+test -f /etc/os-release && MY_OS=$(cat /etc/os-release | grep -w ID | sed -n -E "s/^ID=\"([^-]*).*/\1/p")
+
+if [ $MY_OS == 'suse' ]; then
+    REGISTRY=registry.suse.com
+    IMAGE=suse/toolbox
+elif [ $MY_OS == 'opensuse' ]; then
+    REGISTRY=registry.opensuse.org
+    IMAGE=opensuse/toolbox
+else
+    echo "Unsupported OS"
+    exit 1
+fi
+
 
 setup() {
     # Allow user overrides
