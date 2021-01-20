@@ -5,15 +5,17 @@ On systems using `transactional-update` it is not really possible - due to the r
 
 You can also install and run GUI applications in your `toolbox` container. The root filesystem can be found at `/media/root`. In a "user toolbox" (i.e., one started with `toolbox -u`) the user's home directory is available in the usual place (`/home/$USER`).
 
-## Usage     
-     
+## Usage
+
 The following options are avialbe in `toolbox`:
 * `-h` or `--help`: Shows the help message
 * `-u` or `--user`: Run as the current user inside the container
-* `-R` or `--registry` `<registry>`: Explicitly specify the registry to use
-* `-I` or `--image` `<image>`: Explicitly specify the image to pull
+* `-R` or `--reg` `<registry>`: Explicitly specify the registry to use
+* `-I` or `--img` `<image>`: Explicitly specify the image to pull
+* `-i` or `--image` `<image>`: Full URI of the image to pull (alternative to `-R` & `-I`)
 * `-r` or `--root`: Runs podman via sudo as root
-* `-t` or `--tag` <tag>: Add <tag> to the toolbox name
+* `-t` or `--tag` `<tag>`: Add `<tag>` to the toolbox name
+* `-c` or `--container` `<name>`: Fully replace the toolbox name with `<name>` (alternative to `-t`)
     
 You may override the following variables by setting them in `${HOME}/.toolboxrc`:
 * `REGISTRY`: The registry to pull from. Default value is: `registry.opensuse.org`.
@@ -30,7 +32,15 @@ TOOLBOX_SHELL=/bin/bash
 ```
 
 If a config file is found, with `REGISTRY` and `IMAGE` defined, `${REGISTRY}/${IMAGE}` is used, overriding the default.
-If `-R` and/or `-I` is/are used they override both the defaults and the content of `REGISTRY` and/or `IMAGE` from the config file.
+If `-R` and/or `-I` (or `-i`) is/are used they override both the defaults and the content of `REGISTRY` and/or `IMAGE` from the config file.
+
+### Alternative UI
+
+It is possible to interact with `toolbox` using an interface which is similar to the one of [containers/toolbox](https://github.com/containers/toolbox). That is based on commands, such as:
+* `create`: Creates a toolbox, but does not "enter" inside of it
+* `enter`: Enter a toolbox (creating it, if it does not exist, in our case)
+* `run`: Run a command / start a program inside a toolbox
+* `list`: Show existing toolboxes, although for now it is basically an alias to `podman ps -a`
 
 ### Rootless Usage
 
@@ -215,13 +225,34 @@ Of course, the command to run could even be a shell. However, for using a differ
 
 toolbox uses an openSUSE-based userspace environment called `opensuse/toolbox` by default, but this can be changed to any container image. Simply override environment variables in `$HOME/.toolboxrc`:
 
-#### toolbox
-
 ```
 # cat ~/.toolboxrc
 REGISTRY=registry.opensuse.org
 IMAGE=opensuse/toolbox:latest
 ```
+
+Alternatively, either the `-R` and `-I` parameters can be used, like this:
+```
+$ toolbox -u -R registry.opensuse.org -I opensuse/tumbleweed:latest
+.toolboxrc file detected, overriding defaults...
+Spawning a container 'toolbox-dario-user' with image 'registry.opensuse.org/opensuse/tumbleweed:latest'
+b9b79fda84f1022112c0841f6b3711511a640391a9379adb4257b81a26887c0f
+toolbox-dario-user
+Setting up user 'dario' (with 'sudo' access) inside the container...
+(NOTE that, if 'sudo' and related packages are not present in the image already,
+this may take some time. But this will only happen now that the toolbox is being created)
+Container created.
+Entering container. To exit, type 'exit'.
+dario@toolbox-dario-user:~> exit
+...
+dario@toolbox-dario-user:~>
+exit
+dario@Wayrath:~/Documents/Work/Dario/SUSE> podman ps -a
+CONTAINER ID  IMAGE                                             COMMAND     CREATED             STATUS                      PORTS   NAMES
+b9b79fda84f1  registry.opensuse.org/opensuse/tumbleweed:latest  sleep +Inf  About a minute ago  Exited (143) 3 seconds ago          toolbox-dario-user
+```
+
+Or just put the full URI under the `-i` parameter, such as `toolbox -u -i registry.opensuse.org/opensuse/tumbleweed:latest`.
 
 ### Multiple Toolboxes
 
@@ -256,6 +287,47 @@ CONTAINER ID  IMAGE                                                             
 0dbfbe02b020  registry.opensuse.org/opensuse/toolbox:latest                     /bin/bash             8 minutes ago   Exited (0) 6 minutes ago         toolbox-dario-user-virt
 b20985e6de68  registry.opensuse.org/opensuse/toolbox:latest                     /bin/bash             10 minutes ago  Exited (0) 7 minutes ago         toolbox-dario-user
 ```
+
+### Alternative (Command Based) UI
+
+If wanting to use the commands-based interface, this is the basic operations
+are performed:
+* Creating a user toolbox and entering inside it (equivalent of `toolbox -u`):
+```
+toolbox create
+toolbox enter
+```
+* Running a command inside a toolbox (equivalent of `toolbox -u /usr/bin/foo`):
+```
+toolbox run ls /home/
+```
+* Creating (and entering) a toolbox tagged as `devel` (equivalent of `toolbox -u -t devel`):
+```
+toolbox create -t devel
+toolbox enter -t devel
+```
+* Creating (and entering) a toolbox called `tbx-apps` (equivalent of `toolbox -u -c tbx-apps`):
+```
+toolbox create -c tbx-apps
+toolbox enter -c tbx-apps
+```
+
+Option `-r` can be used together with commands as well, like this:
+* Creating a toolbox running as root, with your user inside (equivalent of `toolbox -u -r`):
+```
+toolbox create -r
+toolbox enter -r
+```
+* Running a command inside a toolbox that runs as root on the host and has your
+user configured in it (equivalent of `toolbox -u -r /usr/bin/foo`):
+```
+toolbox create -r
+toolbox run -r ls /home/
+```
+
+Note that this latter working mode has no equivalent in containers/toolbox where, if
+wanting to start a toolbox that runs as the root user on the host, it must be started
+with `sudo`.
 
 ### Automatically enter toolbox on login
 
