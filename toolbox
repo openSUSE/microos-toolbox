@@ -26,6 +26,7 @@ TOOLBOXRC="${HOME}"/.toolboxrc
 TOOLBOX_SHELL="/bin/bash"
 SUDO=
 
+test -f /usr/etc/toolboxrc && . /usr/etc/toolboxrc
 test -f /etc/toolboxrc && . /etc/toolboxrc
 
 MODE="system"

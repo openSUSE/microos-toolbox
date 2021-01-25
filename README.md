@@ -16,7 +16,7 @@ The following options are avialbe in `toolbox`:
 * `-r` or `--root`: Runs podman via sudo as root
 * `-t` or `--tag` `<tag>`: Add `<tag>` to the toolbox name
 * `-c` or `--container` `<name>`: Fully replace the toolbox name with `<name>` (alternative to `-t`)
-    
+
 You may override the following variables by setting them in `${HOME}/.toolboxrc`:
 * `REGISTRY`: The registry to pull from. Default value is: `registry.opensuse.org`.
 * `IMAGE`: The image and tag from the registry to pull. Default value is: `opensuse/toolbox`.
@@ -33,6 +33,16 @@ TOOLBOX_SHELL=/bin/bash
 
 If a config file is found, with `REGISTRY` and `IMAGE` defined, `${REGISTRY}/${IMAGE}` is used, overriding the default.
 If `-R` and/or `-I` (or `-i`) is/are used they override both the defaults and the content of `REGISTRY` and/or `IMAGE` from the config file.
+
+### Configuration files
+
+Beside the user configuration file, there are two additional system wide
+configuration files:
+* `/usr/etc/toolboxrc`: distribution specific configuration file
+* `/etc/toolboxrc`: system specific configuration file created by a system administrator
+
+The configuration files are read in the order: `/usr/etc/toolboxrc`,
+`/etc/toolboxrc`, `~/.toolboxrc`. The last value is used.
 
 ### Alternative UI
 
@@ -207,8 +217,8 @@ toolbox-dario-user
 Container started.
 Entering container. To exit, type 'exit'.
  _   _               __
-| | | | ___ _   _   / _|_ __ ___  _ __ ___  
-| |_| |/ _ \ | | | | |_| '__/ _ \| '_ ` _ \ 
+| | | | ___ _   _   / _|_ __ ___  _ __ ___
+| |_| |/ _ \ | | | | |_| '__/ _ \| '_ ` _ \
 |  _  |  __/ |_| | |  _| | | (_) | | | | | |
 |_| |_|\___|\__, | |_| |_|  \___/|_| |_| |_|
             |___/
@@ -353,13 +363,13 @@ toolbox-bob:/ #
 ## Troubleshooting
 
 ### Podman can't pull/run images with user
-If you want to run a rootless `toolbox` setup you might need to add a range of UID and GID for the user you want to run `toolbox` with. Before adding UID and GID ranges check if `/etc/subuid` and `/etc/subgid` are actually empty. If empty you can run this as root to populate them:   
+If you want to run a rootless `toolbox` setup you might need to add a range of UID and GID for the user you want to run `toolbox` with. Before adding UID and GID ranges check if `/etc/subuid` and `/etc/subgid` are actually empty. If empty you can run this as root to populate them:
 
 ```
 echo "podman_user:100000:65536" > /etc/subuid
 echo "podman_user:100000:65536" > /etc/subgid
 ```
 
-### GUI application can't connect to display 
+### GUI application can't connect to display
 
 This happens if you run the container as root - with sudo for example - while you're logged in as user to the desktop environment. The easiest way is to use `toolbox -u` with your user to setup a "rootless toolbox"  container for such cases.
