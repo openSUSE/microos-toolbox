@@ -28,6 +28,28 @@ SUDO=
 
 test -f /etc/toolboxrc && . /etc/toolboxrc
 
+MODE="system"
+
+USER_ENV="DBUS_SESSION_BUS_ADDRESS \
+    DBUS_SYSTEM_BUS_ADDRESS \
+    DESKTOP_SESSION \
+    SESSION_MANAGER \
+    DISPLAY \
+    LANG \
+    SSH_AUTH_SOCK \
+    USER \
+    USERNAME \
+    WAYLAND_DISPLAY \
+    XAUTHORITY \
+    XAUTHLOCALHOSTNAME \
+    XDG_CURRENT_DESKTOP \
+    XDG_DATA_DIRS \
+    XDG_MENU_PREFIX \
+    XDG_RUNTIME_DIR \
+    XDG_SESSION_CLASS \
+    XDG_SESSION_DESKTOP \
+    XDG_SESSION_TYPE"
+
 setup() {
     # Allow user overrides
     if [ -f "${TOOLBOXRC}" ]; then
@@ -37,11 +59,12 @@ setup() {
     TOOLBOX_IMAGE="${REGISTRY}"/"${IMAGE}"
 }
 
-run() {
+create() {
     if ! image_exists; then
         image_pull
     fi
 
+    local msg="creat"
     local runlabel=$(image_runlabel)
     if ! container_exists; then
         echo "Spawning a container '$TOOLBOX_NAME' with image '$TOOLBOX_IMAGE'"
@@ -57,6 +80,7 @@ run() {
     else
         echo "Container '$TOOLBOX_NAME' already exists. Trying to start..."
         echo "(To remove the container and start with a fresh toolbox, run: podman rm '$TOOLBOX_NAME')"
+	msg="start"
     fi
 
     local state=$(container_state)
@@ -85,7 +109,13 @@ EOF
         ${SUDO} podman exec --user root ${TOOLBOX_NAME} rm ${tmp_user_setup}
     fi
 
-    echo "Container started successfully. To exit, type 'exit'."
+    echo "Container ${msg}ed."
+}
+
+run() {
+    create
+
+    echo "Entering container. To exit, type 'exit'."
     container_exec "$@"
 }
 
@@ -111,6 +141,10 @@ image_runlabel() {
 
 image_pull() {
     ${SUDO} podman pull "$TOOLBOX_IMAGE"
+}
+
+list() {
+    ${SUDO} podman ps --all
 }
 
 container_create() {
@@ -153,16 +187,30 @@ container_exec() {
 }
 
 show_help() {
-    echo "USAGE: toolbox [[-h/--help] | [-r/--root] [-u/--user] [-t/--tag <tag>] [command]]
+    echo "USAGE: toolbox [[-h/--help] | [command] [-r/--root] [-u/--user]
+        [[-R/--reg <registry>] [-I/--img <image>]|[-i/--image <image_URI>]]
+        [[-t/--tag <tag>]|[-c/--container <name>]] [command_to_run]]
 toolbox is a small script that launches a container to let you bring in your favorite debugging or admin tools.
 The toolbox container is a pet container and will be restarted on following runs.
 To remove the container and start fresh, do podman rm ${TOOLBOX_NAME}.
+
+Commands are optional. The supported ones are:
+ list: List existing toolboxes
+ create: Just create the toolbox
+ enter: Enter inside a toolbox (if it does not exist, it is created)
+ run: Run command_to_run inside a toolbox (if it does not exist, it is created)
 
 Options:
   -h/--help: Shows this help message
   -u/--user: Run as the current user inside the container
   -r/--root: Runs podman via sudo as root
   -t/--tag <tag>: Add <tag> to the toolbox name
+  -c/--container <name>: Set the name of the toolbox to be equal to <name>
+                         (use this alternatively to -t)
+  -R/--reg <registry>: Pulls the container image from <registry>
+  -I/--img <image>: Pulls the image called <image>
+  -i/--image <image_URI>: Pulls <image_URI> as a container image (use this
+                          alternatively to -R and -I)
 
 You may override the following variables by setting them in ${TOOLBOXRC}:
 - REGISTRY: The registry to pull from. Default: $REGISTRY
@@ -177,15 +225,43 @@ TOOLBOX_NAME=special-debug-container
 TOOLBOX_SHELL=/bin/bash"
 }
 
+is_option() {
+    if [ "${1:0:1}" = "-" ]; then
+        return 1
+    fi
+    return 0
+}
+
 main() {
     # Execute setup first so we get proper variables
     setup
-    # If we are passed a help switch, show help and exit
-    ARGS=`getopt -o hrut:R:I: --long help,root,user,tag:,registry:,image: -n toolbox -- "$@"`
+
+    # Deal with commands first. We want to support both "command mode"
+    # (compatible with Silverblue's toolbox) and the current "command-less"
+    # mode of operation. If wanting to use a command, that has to be the
+    # first argument. If no command is provided, we basically default to
+    # 'run', which is 'create, start and fire a shell inside the toolbox'.
+    #
+    # Note that, if a command is used, we set  "user" mode by default (i.e.,
+    # even if `-u` is not specified later). This is again for compatibility
+    # with https://github.com/containers/toolbox).
+    COMMAND=run
+    if [ ! -z $1 ] && is_option $1 ; then
+        case $1 in
+            create | list | enter | run )
+                MODE="user"
+                COMMAND=$1
+                shift
+                ;;
+        esac
+    fi
+
+    ARGS=`getopt -o hrut:R:I:c:i: --long help,root,user,tag:,reg:,img:,container:,image: -n toolbox -- "$@"`
     eval set -- "$ARGS"
     while true; do
         case "$1" in
             -h|--help)
+                # If we are passed a help switch, show help and exit
                 show_help
                 exit 0
                 ;;
@@ -195,31 +271,38 @@ main() {
                 ;;
             -u|--user)
                 shift
-                USER_ID=`id -u`; USER_GID=`id -g`
-                USER_NAME=`id -un` ; USER_GNAME=`id -gn`
-                USER_HOME=$HOME
-                TOOLBOX_NAME="${TOOLBOX_NAME}-user"
-
-                # We want to keep the pid namespace of the running user.
-                # We, however, use root:root while creating, so that later we
-                # can modify the user's name, groups, etc, within the container.
-                CREATE_AS_USER="--pid host --userns=keep-id -v ${HOME}:${HOME} --user root:root --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave "
-                EXEC_AS_USER="--user ${USER_ID}:${USER_GID} -w `pwd` --env SSH_AUTH_SOCK=$SSH_AUTH_SOCK --env DISPLAY=$DISPLAY --env XAUTHORITY=$XAUTHORITY"
+		MODE="user"
+                ;;
+            -c|--container)
+                if [ ! -z $TAG ]; then
+                    echo "ERROR: Don't use both -c and -t!"
+                    show_help
+                    exit 1
+                fi
+                CHANGE_NAME="true"
+                TOOLBOX_NAME="$2"
+                shift 2
                 ;;
             -t|--tag)
-                TOOLBOX_NAME="${TOOLBOX_NAME}-$2"
+                if [ ! -z $CHANGE_NAME ]; then
+                    echo "ERROR: Don't use both -c and -t!"
+                    show_help
+                    exit 1
+                fi
+                TAG="$2"
                 shift 2
                 ;;
-            -R|--registry)
+            -R|--reg)
                 REGISTRY=$2
-                # Let's rebuild the image URI (this means that command
-                # line, if present, overrides config file)
-                TOOLBOX_IMAGE="${REGISTRY}"/"${IMAGE}"
                 shift 2
                 ;;
-            -I|--image)
+            -I|--img)
                 IMAGE=$2
-                TOOLBOX_IMAGE="${REGISTRY}"/"${IMAGE}"
+                shift 2
+                ;;
+            -i|--image)
+                REGISTRY=""
+                IMAGE=$2
                 shift 2
                 ;;
             --)
@@ -234,12 +317,53 @@ main() {
         esac
     done
 
-    if [ -z "$*" ]; then
-	run ${TOOLBOX_SHELL}
-    else
-	run "$@"
+    # Let's rebuild the image URI (this means that command
+    # line, if present, overrides config file)
+    TOOLBOX_IMAGE=`echo "${REGISTRY}"/"${IMAGE}" | sed 's/^\///g'`
+
+    if [ "$MODE" = "user" ]; then
+        USER_ID=`id -u`; USER_GID=`id -g`
+        USER_NAME=`id -un` ; USER_GNAME=`id -gn`
+        USER_HOME=$HOME
+	if [ -z $CHANGE_NAME ]; then
+            TOOLBOX_NAME="${TOOLBOX_NAME}-user"
+        fi
+
+        # We want to keep the pid namespace of the running user.
+        # We, however, use root:root while creating, so that later we
+        # can modify the user's name, groups, etc, within the container.
+        CREATE_AS_USER="--pid host --userns=keep-id -v ${HOME}:${HOME} --user root:root --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave --volume /run/media/:/run/media/:rslave --volume /tmp:/tmp:rslave"
+        for ENV in $USER_ENV ; do
+            eval VAL="$""$ENV"
+            [[ ! -z $VAL ]] && USER_ENV_STR="$USER_ENV_STR --env $ENV=$VAL"
+        done
+        EXEC_AS_USER="--user ${USER_ID}:${USER_GID} -w `pwd` $USER_ENV_STR"
     fi
-    cleanup
+
+    if [ ! -z $TAG ]; then
+        TOOLBOX_NAME="${TOOLBOX_NAME}-$TAG"
+    fi
+
+    case $COMMAND in
+        list)
+            list
+            ;;
+        create)
+            create
+            ;;
+        enter|run)
+            if [ -z "$*" ]; then
+                run ${TOOLBOX_SHELL}
+            else
+                run "$@"
+            fi
+            cleanup
+            ;;
+        *)
+            echo "unknown command: '$COMMAND'"
+            exit 1
+            ;;
+    esac
 }
 
 main "$@"
