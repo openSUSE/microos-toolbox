@@ -325,7 +325,6 @@ main() {
     if [ "$MODE" = "user" ]; then
         USER_ID=`id -u`; USER_GID=`id -g`
         USER_NAME=`id -un` ; USER_GNAME=`id -gn`
-        USER_HOME=$HOME
 	if [ -z $CHANGE_NAME ]; then
             TOOLBOX_NAME="${TOOLBOX_NAME}-user"
         fi
@@ -333,7 +332,11 @@ main() {
         # We want to keep the pid namespace of the running user.
         # We, however, use root:root while creating, so that later we
         # can modify the user's name, groups, etc, within the container.
-        CREATE_AS_USER="--pid host --userns=keep-id -v ${HOME}:${HOME} --user root:root --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave --volume /run/media/:/run/media/:rslave --volume /tmp:/tmp:rslave"
+	VOLUMES="--volume /tmp:/tmp:rslave"
+	test -d ${HOME} && VOLUMES="$VOLUMES --volume ${HOME}:${HOME}"
+	test -d /run/user/${USER_ID} && VOLUMES="$VOLUMES --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave"
+	test -d /run/media && VOLUMES="$VOLUMES --volume /run/media/:/run/media/:rslave"
+        CREATE_AS_USER="--pid host --userns=keep-id --user root:root $VOLUMES"
         for ENV in $USER_ENV ; do
             eval VAL="$""$ENV"
             [[ ! -z $VAL ]] && USER_ENV_STR="$USER_ENV_STR --env $ENV=$VAL"
