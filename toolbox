@@ -66,7 +66,8 @@ create() {
     fi
 
     local msg="creat"
-    local runlabel=$(image_runlabel)
+    local runlabel
+    runlabel=$(image_runlabel) ||:
     if ! container_exists; then
         echo "Spawning a container '$TOOLBOX_NAME' with image '$TOOLBOX_IMAGE'"
         if [[ -z "$runlabel" ]]; then
@@ -77,14 +78,15 @@ create() {
             return
         fi
 	# We want to do the user setup only when the container is created for the first time
-	[[ ! -z ${CREATE_AS_USER} ]] && SETUP_USER=true
+	[[ -n "${CREATE_AS_USER}" ]] && SETUP_USER=true
     else
         echo "Container '$TOOLBOX_NAME' already exists. Trying to start..."
         echo "(To remove the container and start with a fresh toolbox, run: podman rm '$TOOLBOX_NAME')"
 	msg="start"
     fi
 
-    local state=$(container_state)
+    local state
+    state=$(container_state)
     if [[ "$state" == configured ]] || [[ "$state" == exited ]] || [[ "$state" == stopped ]]; then
         container_start
     elif [[ "$state" != running ]]; then
@@ -96,8 +98,9 @@ create() {
         echo "Setting up user '${USER_NAME}' (with 'sudo' access) inside the container..."
         echo "(NOTE that, if 'sudo' and related packages are not present in the image already,"
         echo "this may take some time. But this will only happen now that the toolbox is being created)"
-        local tmp_user_setup=`mktemp ${HOME}/.${TOOLBOX_NAME}-user-setup-XXXXXX.sh`
-        cat <<EOF > ${tmp_user_setup}
+        local tmp_user_setup
+	tmp_user_setup=$(mktemp "${HOME}/.${TOOLBOX_NAME}-user-setup-XXXXXX.sh")
+        cat <<EOF > "${tmp_user_setup}"
 #!/bin/bash
 groupadd -g ${USER_GID} ${USER_GNAME} &> /dev/null
 useradd -M -N -g ${USER_GNAME} -u ${USER_ID} ${USER_NAME} &> /dev/null
@@ -105,9 +108,9 @@ getent group wheel >/dev/null || zypper install -y --no-recommends sudo system-g
 echo "%wheel ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/wheel 2> /dev/null
 usermod -G wheel -a ${USER_NAME} &> /dev/null
 EOF
-        ${SUDO} podman cp ${tmp_user_setup} ${TOOLBOX_NAME}:${tmp_user_setup}
-        ${SUDO} podman exec --user root ${TOOLBOX_NAME} bash ${tmp_user_setup}
-        ${SUDO} podman exec --user root ${TOOLBOX_NAME} rm ${tmp_user_setup}
+        ${SUDO} podman cp "${tmp_user_setup}" "${TOOLBOX_NAME}":"${tmp_user_setup}"
+        ${SUDO} podman exec --user root "${TOOLBOX_NAME}" bash "${tmp_user_setup}"
+        ${SUDO} podman exec --user root "${TOOLBOX_NAME}" rm "${tmp_user_setup}"
     fi
 
     echo "Container ${msg}ed."
@@ -247,7 +250,7 @@ main() {
     # even if `-u` is not specified later). This is again for compatibility
     # with https://github.com/containers/toolbox).
     COMMAND=run
-    if [ ! -z $1 ] && is_option $1 ; then
+    if [ -n "$1" ] && is_option $1 ; then
         case $1 in
             create | list | enter | run )
                 MODE="user"
@@ -257,7 +260,7 @@ main() {
         esac
     fi
 
-    ARGS=`getopt -o hrut:R:I:c:i: --long help,root,user,tag:,reg:,img:,container:,image: -n toolbox -- "$@"`
+    ARGS=$(getopt -o hrut:R:I:c:i: --long help,root,user,tag:,reg:,img:,container:,image: -n toolbox -- "$@")
     eval set -- "$ARGS"
     while true; do
         case "$1" in
@@ -275,7 +278,7 @@ main() {
 		MODE="user"
                 ;;
             -c|--container)
-                if [ ! -z $TAG ]; then
+                if [ -z "$TAG" ]; then
                     echo "ERROR: Don't use both -c and -t!"
                     show_help
                     exit 1
@@ -285,7 +288,7 @@ main() {
                 shift 2
                 ;;
             -t|--tag)
-                if [ ! -z $CHANGE_NAME ]; then
+                if [ -n "$CHANGE_NAME" ]; then
                     echo "ERROR: Don't use both -c and -t!"
                     show_help
                     exit 1
@@ -320,12 +323,12 @@ main() {
 
     # Let's rebuild the image URI (this means that command
     # line, if present, overrides config file)
-    TOOLBOX_IMAGE=`echo "${REGISTRY}"/"${IMAGE}" | sed 's/^\///g'`
+    TOOLBOX_IMAGE=$(echo "${REGISTRY}"/"${IMAGE}" | sed 's/^\///g')
 
     if [ "$MODE" = "user" ]; then
-        USER_ID=`id -u`; USER_GID=`id -g`
-        USER_NAME=`id -un` ; USER_GNAME=`id -gn`
-	if [ -z $CHANGE_NAME ]; then
+        USER_ID=$(id -u); USER_GID=$(id -g)
+        USER_NAME=$(id -un) ; USER_GNAME=$(id -gn)
+	if [ -z "$CHANGE_NAME" ]; then
             TOOLBOX_NAME="${TOOLBOX_NAME}-user"
         fi
 
@@ -333,18 +336,18 @@ main() {
         # We, however, use root:root while creating, so that later we
         # can modify the user's name, groups, etc, within the container.
 	VOLUMES="--volume /tmp:/tmp:rslave"
-	test -d ${HOME} && VOLUMES="$VOLUMES --volume ${HOME}:${HOME}"
-	test -d /run/user/${USER_ID} && VOLUMES="$VOLUMES --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave"
+	test -d "${HOME}" && VOLUMES="$VOLUMES --volume ${HOME}:${HOME}"
+	test -d "/run/user/${USER_ID}" && VOLUMES="$VOLUMES --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave"
 	test -d /run/media && VOLUMES="$VOLUMES --volume /run/media/:/run/media/:rslave"
         CREATE_AS_USER="--pid host --userns=keep-id --user root:root $VOLUMES"
         for ENV in $USER_ENV ; do
             eval VAL="$""$ENV"
-            [[ ! -z $VAL ]] && USER_ENV_STR="$USER_ENV_STR --env $ENV=$VAL"
+            [[ -n "$VAL" ]] && USER_ENV_STR="$USER_ENV_STR --env $ENV=$VAL"
         done
-        EXEC_AS_USER="--user ${USER_ID}:${USER_GID} -w `pwd` $USER_ENV_STR"
+        EXEC_AS_USER="--user ${USER_ID}:${USER_GID} -w $(pwd) $USER_ENV_STR"
     fi
 
-    if [ ! -z $TAG ]; then
+    if [ -n "$TAG" ]; then
         TOOLBOX_NAME="${TOOLBOX_NAME}-$TAG"
     fi
 
