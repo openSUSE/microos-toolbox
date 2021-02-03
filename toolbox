@@ -99,7 +99,7 @@ create() {
         echo "(NOTE that, if 'sudo' and related packages are not present in the image already,"
         echo "this may take some time. But this will only happen now that the toolbox is being created)"
         local tmp_user_setup
-	tmp_user_setup=$(mktemp "${HOME}/.${TOOLBOX_NAME}-user-setup-XXXXXX.sh")
+        tmp_user_setup=$(mktemp "${HOME}/.${TOOLBOX_NAME}-user-setup-XXXXXX.sh")
         cat <<EOF > "${tmp_user_setup}"
 #!/bin/bash
 groupadd -g ${USER_GID} ${USER_GNAME} &> /dev/null
@@ -335,10 +335,10 @@ main() {
         # We want to keep the pid namespace of the running user.
         # We, however, use root:root while creating, so that later we
         # can modify the user's name, groups, etc, within the container.
-	VOLUMES="--volume /tmp:/tmp:rslave"
-	test -d "${HOME}" && VOLUMES="$VOLUMES --volume ${HOME}:${HOME}"
-	test -d "/run/user/${USER_ID}" && VOLUMES="$VOLUMES --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave"
-	test -d /run/media && VOLUMES="$VOLUMES --volume /run/media/:/run/media/:rslave"
+        VOLUMES="--volume /tmp:/tmp:rslave"
+        test -d "${HOME}" && VOLUMES="$VOLUMES --volume ${HOME}:${HOME}"
+        test -d "/run/user/${USER_ID}" && VOLUMES="$VOLUMES --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave"
+        test -d /run/media && VOLUMES="$VOLUMES --volume /run/media/:/run/media/:rslave"
         CREATE_AS_USER="--pid host --userns=keep-id --user root:root $VOLUMES"
         for ENV in $USER_ENV ; do
             eval VAL="$""$ENV"
