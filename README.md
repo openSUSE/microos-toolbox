@@ -54,7 +54,7 @@ It is possible to interact with `toolbox` using an interface which is similar to
 * `enter`: Enter a toolbox (creating it, if it does not exist, in our case)
 * `run`: Run a command / start a program inside a toolbox
 * `list`: Show existing toolboxes, although for now it is basically an alias to `podman ps -a`
-This commands imply user mode (-u).
+This commands imply user mode (-u) and uses a different container (`toolbox-<user>-user` vs. `toolbox-<user>`).
 
 ### Rootless Usage
 
