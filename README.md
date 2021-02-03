@@ -32,7 +32,10 @@ TOOLBOX_SHELL=/bin/bash
 ```
 
 If a config file is found, with `REGISTRY` and `IMAGE` defined, `${REGISTRY}/${IMAGE}` is used, overriding the default.
-If `-R` and/or `-I` (or `-i`) is/are used they override both the defaults and the content of `REGISTRY` and/or `IMAGE` from the config file.
+If `-R` and/or `-I` (or `-i`) is/are used they override both the defaults and
+the content of `REGISTRY` and/or `IMAGE` from the config file. If an alternate
+image is used, the `REGISTRY` and/or `IMAGE` needs to be specified with every
+`toolbox` call.
 
 ### Configuration files
 
@@ -51,6 +54,7 @@ It is possible to interact with `toolbox` using an interface which is similar to
 * `enter`: Enter a toolbox (creating it, if it does not exist, in our case)
 * `run`: Run a command / start a program inside a toolbox
 * `list`: Show existing toolboxes, although for now it is basically an alias to `podman ps -a`
+This commands imply user mode (-u).
 
 ### Rootless Usage
 

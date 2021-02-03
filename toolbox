@@ -195,7 +195,7 @@ toolbox is a small script that launches a container to let you bring in your fav
 The toolbox container is a pet container and will be restarted on following runs.
 To remove the container and start fresh, do podman rm ${TOOLBOX_NAME}.
 
-Commands are optional. The supported ones are:
+Commands are optional and imply user mode (-u):
  list: List existing toolboxes
  create: Just create the toolbox
  enter: Enter inside a toolbox (if it does not exist, it is created)
