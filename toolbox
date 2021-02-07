@@ -100,16 +100,19 @@ create() {
         echo "this may take some time. But this will only happen now that the toolbox is being created)"
         local tmp_user_setup
         tmp_user_setup=$(mktemp "${HOME}/.${TOOLBOX_NAME}-user-setup-XXXXXX.sh")
+        tmp_user_setup_log="/dev/null"
+        # DEBUG: uncomment the following line to see logs of the script in /tmp
+        #tmp_user_setup_log="/tmp/$(basename -- ${tmp_user_setup}).log"
         cat <<EOF > "${tmp_user_setup}"
 #!/bin/bash
-groupadd -g ${USER_GID} ${USER_GNAME} &> /dev/null
-useradd -M -N -g ${USER_GNAME} -u ${USER_ID} ${USER_NAME} &> /dev/null
-getent group wheel >/dev/null || zypper install -y --no-recommends sudo system-group-wheel &> /dev/null
-echo "%wheel ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/wheel 2> /dev/null
-usermod -G wheel -a ${USER_NAME} &> /dev/null
+groupadd -g ${USER_GID} ${USER_GNAME}
+useradd -M -N -g ${USER_GNAME} -u ${USER_ID} ${USER_NAME}
+getent group wheel &>/dev/null || zypper install -y --no-recommends sudo system-group-wheel
+echo "%wheel ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/wheel
+usermod -G wheel -a ${USER_NAME}
 EOF
         ${SUDO} podman cp "${tmp_user_setup}" "${TOOLBOX_NAME}":"${tmp_user_setup}"
-        ${SUDO} podman exec --user root "${TOOLBOX_NAME}" bash "${tmp_user_setup}"
+        ${SUDO} podman exec --user root "${TOOLBOX_NAME}" bash "${tmp_user_setup}" &> "${tmp_user_setup_log}"
         ${SUDO} podman exec --user root "${TOOLBOX_NAME}" rm "${tmp_user_setup}"
     fi
 
