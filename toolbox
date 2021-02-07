@@ -107,9 +107,10 @@ create() {
 #!/bin/bash
 groupadd -g ${USER_GID} ${USER_GNAME}
 useradd -M -N -g ${USER_GNAME} -u ${USER_ID} ${USER_NAME}
-getent group wheel &>/dev/null || zypper install -y --no-recommends sudo system-group-wheel
-echo "%wheel ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/wheel
-usermod -G wheel -a ${USER_NAME}
+if ! command -v sudo &> /dev/null ; then
+  zypper install -y --no-recommends sudo
+fi
+mkdir -p /etc/sudoers.d/ && echo "${USER_NAME} ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/${USER_NAME}
 EOF
         ${SUDO} podman cp "${tmp_user_setup}" "${TOOLBOX_NAME}":"${tmp_user_setup}"
         ${SUDO} podman exec --user root "${TOOLBOX_NAME}" bash "${tmp_user_setup}" &> "${tmp_user_setup_log}"
