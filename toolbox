@@ -77,12 +77,12 @@ create() {
             container_runlabel
             return
         fi
-	# We want to do the user setup only when the container is created for the first time
-	[[ -n "${CREATE_AS_USER}" ]] && SETUP_USER=true
+        # We want to do the user setup only when the container is created for the first time
+        [[ -n "${CREATE_AS_USER}" ]] && SETUP_USER=true
     else
         echo "Container '$TOOLBOX_NAME' already exists. Trying to start..."
         echo "(To remove the container and start with a fresh toolbox, run: podman rm '$TOOLBOX_NAME')"
-	msg="start"
+        msg="start"
     fi
 
     local state
@@ -159,7 +159,7 @@ container_create() {
                  --privileged \
                  --security-opt label=disable ${CREATE_AS_USER} \
                  --volume /:/media/root:rslave \
-		 --volume /dev:/dev:rslave \
+                 --volume /dev:/dev:rslave \
                  "$TOOLBOX_IMAGE" sleep +Inf 2>&1; then
         echo "$0: failed to create container '$TOOLBOX_NAME'"
         exit 1
@@ -275,7 +275,7 @@ main() {
                 ;;
             -u|--user)
                 shift
-		MODE="user"
+                MODE="user"
                 ;;
             -c|--container)
                 if [ -z "$TAG" ]; then
@@ -328,7 +328,7 @@ main() {
     if [ "$MODE" = "user" ]; then
         USER_ID=$(id -u); USER_GID=$(id -g)
         USER_NAME=$(id -un) ; USER_GNAME=$(id -gn)
-	if [ -z "$CHANGE_NAME" ]; then
+        if [ -z "$CHANGE_NAME" ]; then
             TOOLBOX_NAME="${TOOLBOX_NAME}-user"
         fi
 
