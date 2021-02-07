@@ -160,6 +160,7 @@ container_create() {
                  --security-opt label=disable ${CREATE_AS_USER} \
                  --volume /:/media/root:rslave \
                  --volume /dev:/dev:rslave \
+                 --volume /etc/machine-id:/etc/machine-id:ro \
                  "$TOOLBOX_IMAGE" sleep +Inf 2>&1; then
         echo "$0: failed to create container '$TOOLBOX_NAME'"
         exit 1
@@ -339,7 +340,7 @@ main() {
         test -d "${HOME}" && VOLUMES="$VOLUMES --volume ${HOME}:${HOME}"
         test -d "/run/user/${USER_ID}" && VOLUMES="$VOLUMES --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave"
         test -d /run/media && VOLUMES="$VOLUMES --volume /run/media/:/run/media/:rslave"
-        CREATE_AS_USER="--pid host --userns=keep-id --user root:root $VOLUMES"
+        CREATE_AS_USER="--pid host --ipc host --userns=keep-id --user root:root $VOLUMES"
         for ENV in $USER_ENV ; do
             eval VAL="$""$ENV"
             [[ -n "$VAL" ]] && USER_ENV_STR="$USER_ENV_STR --env $ENV=$VAL"
