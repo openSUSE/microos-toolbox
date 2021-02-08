@@ -77,12 +77,12 @@ create() {
             container_runlabel
             return
         fi
-	# We want to do the user setup only when the container is created for the first time
-	[[ -n "${CREATE_AS_USER}" ]] && SETUP_USER=true
+        # We want to do the user setup only when the container is created for the first time
+        [[ -n "${CREATE_AS_USER}" ]] && SETUP_USER=true
     else
         echo "Container '$TOOLBOX_NAME' already exists. Trying to start..."
         echo "(To remove the container and start with a fresh toolbox, run: podman rm '$TOOLBOX_NAME')"
-	msg="start"
+        msg="start"
     fi
 
     local state
@@ -100,16 +100,20 @@ create() {
         echo "this may take some time. But this will only happen now that the toolbox is being created)"
         local tmp_user_setup
         tmp_user_setup=$(mktemp "${HOME}/.${TOOLBOX_NAME}-user-setup-XXXXXX.sh")
+        tmp_user_setup_log="/dev/null"
+        # DEBUG: uncomment the following line to see logs of the script in /tmp
+        #tmp_user_setup_log="/tmp/$(basename -- ${tmp_user_setup}).log"
         cat <<EOF > "${tmp_user_setup}"
 #!/bin/bash
-groupadd -g ${USER_GID} ${USER_GNAME} &> /dev/null
-useradd -M -N -g ${USER_GNAME} -u ${USER_ID} ${USER_NAME} &> /dev/null
-getent group wheel >/dev/null || zypper install -y --no-recommends sudo system-group-wheel &> /dev/null
-echo "%wheel ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/wheel 2> /dev/null
-usermod -G wheel -a ${USER_NAME} &> /dev/null
+groupadd -g ${USER_GID} ${USER_GNAME}
+useradd -M -N -g ${USER_GNAME} -u ${USER_ID} ${USER_NAME}
+if ! command -v sudo &> /dev/null ; then
+  zypper install -y --no-recommends sudo
+fi
+mkdir -p /etc/sudoers.d/ && echo "${USER_NAME} ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/${USER_NAME}
 EOF
         ${SUDO} podman cp "${tmp_user_setup}" "${TOOLBOX_NAME}":"${tmp_user_setup}"
-        ${SUDO} podman exec --user root "${TOOLBOX_NAME}" bash "${tmp_user_setup}"
+        ${SUDO} podman exec --user root "${TOOLBOX_NAME}" bash "${tmp_user_setup}" &> "${tmp_user_setup_log}"
         ${SUDO} podman exec --user root "${TOOLBOX_NAME}" rm "${tmp_user_setup}"
     fi
 
@@ -159,7 +163,8 @@ container_create() {
                  --privileged \
                  --security-opt label=disable ${CREATE_AS_USER} \
                  --volume /:/media/root:rslave \
-		 --volume /dev:/dev:rslave \
+                 --volume /dev:/dev:rslave \
+                 --volume /etc/machine-id:/etc/machine-id:ro \
                  "$TOOLBOX_IMAGE" sleep +Inf 2>&1; then
         echo "$0: failed to create container '$TOOLBOX_NAME'"
         exit 1
@@ -275,7 +280,7 @@ main() {
                 ;;
             -u|--user)
                 shift
-		MODE="user"
+                MODE="user"
                 ;;
             -c|--container)
                 if [ -z "$TAG" ]; then
@@ -328,7 +333,7 @@ main() {
     if [ "$MODE" = "user" ]; then
         USER_ID=$(id -u); USER_GID=$(id -g)
         USER_NAME=$(id -un) ; USER_GNAME=$(id -gn)
-	if [ -z "$CHANGE_NAME" ]; then
+        if [ -z "$CHANGE_NAME" ]; then
             TOOLBOX_NAME="${TOOLBOX_NAME}-user"
         fi
 
@@ -339,7 +344,7 @@ main() {
         test -d "${HOME}" && VOLUMES="$VOLUMES --volume ${HOME}:${HOME}"
         test -d "/run/user/${USER_ID}" && VOLUMES="$VOLUMES --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave"
         test -d /run/media && VOLUMES="$VOLUMES --volume /run/media/:/run/media/:rslave"
-        CREATE_AS_USER="--pid host --userns=keep-id --user root:root $VOLUMES"
+        CREATE_AS_USER="--pid host --ipc host --userns=keep-id --user root:root $VOLUMES"
         for ENV in $USER_ENV ; do
             eval VAL="$""$ENV"
             [[ -n "$VAL" ]] && USER_ENV_STR="$USER_ENV_STR --env $ENV=$VAL"
