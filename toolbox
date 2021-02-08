@@ -174,7 +174,9 @@ container_create() {
                  --security-opt label=disable ${CREATE_AS_USER} \
                  --volume /:/media/root:rslave \
                  --volume /dev:/dev:rslave \
+                 --volume /sys:/sys:rslave \
                  --volume /etc/machine-id:/etc/machine-id:ro \
+                 --volume /etc/localtime:/etc/localtime:ro \
                  "$TOOLBOX_IMAGE" sleep +Inf 2>&1; then
         echo "$0: failed to create container '$TOOLBOX_NAME'"
         exit 1
