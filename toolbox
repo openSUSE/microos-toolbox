@@ -283,7 +283,7 @@ main() {
                 MODE="user"
                 ;;
             -c|--container)
-                if [ -z "$TAG" ]; then
+                if [ -n "$TAG" ]; then
                     echo "ERROR: Don't use both -c and -t!"
                     show_help
                     exit 1
