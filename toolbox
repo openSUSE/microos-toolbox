@@ -148,6 +148,17 @@ image_runlabel() {
 }
 
 image_pull() {
+    if [ -z ${SUDO} ]; then
+        if [ ! `grep $USER /etc/subuid` ] || [ ! `grep $USER /etc/subgid` ]; then
+            echo "$0: ERROR: rootless mode wanted but no subuid and/or subgid for user '$USER'"
+            echo " Toolbox will only work for this user if rootless podman is configured properly."
+            echo " consider doing something like this:"
+            echo "    sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 $USER"
+            echo " and then restart."
+            echo " Or use '-r', for using a rootfull container."
+            exit 1
+        fi
+    fi
     ${SUDO} podman pull "$TOOLBOX_IMAGE"
 }
 
