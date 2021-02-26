@@ -16,8 +16,6 @@
 
 set -eo pipefail
 
-trap cleanup EXIT
-
 # Defaults
 REGISTRY=registry.opensuse.org
 IMAGE=opensuse/toolbox
@@ -336,6 +334,10 @@ main() {
                 ;;
         esac
     done
+
+    # Don't call trap before, else we will cleanup stuff
+    # where nothing is to cleanup and report wrong error
+    trap cleanup EXIT
 
     # Let's rebuild the image URI (this means that command
     # line, if present, overrides config file)
