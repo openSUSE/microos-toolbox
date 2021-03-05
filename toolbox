@@ -110,7 +110,6 @@ if ! command -v sudo &> /dev/null ; then
 fi
 mkdir -p /etc/sudoers.d/ && echo "${USER_NAME} ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/${USER_NAME}
 EOF
-        ${SUDO} podman cp "${tmp_user_setup}" "${TOOLBOX_NAME}":"${tmp_user_setup}"
         ${SUDO} podman exec --user root "${TOOLBOX_NAME}" bash "${tmp_user_setup}" &> "${tmp_user_setup_log}"
         ${SUDO} podman exec --user root "${TOOLBOX_NAME}" rm "${tmp_user_setup}"
     fi
@@ -127,6 +126,7 @@ run() {
 
 cleanup() {
     ${SUDO} podman stop "$TOOLBOX_NAME" &>/dev/null
+    ${SUDO} rm -f $tmp_user_setup
 }
 
 container_exists() {
