@@ -165,6 +165,10 @@ list() {
 }
 
 container_create() {
+    VOLUMES=""
+    if [ -r /etc/SUSEConnect ]; then
+		VOLUMES="--volume /etc/SUSEConnect:/etc/SUSEConnect:ro --volume /etc/zypp/credentials.d/SCCcredentials:/etc/zypp/credentials.d/SCCcredentials:ro "
+    fi
     if ! ${SUDO} podman create \
                  --hostname "$TOOLBOX_NAME" \
                  --name "$TOOLBOX_NAME" \
@@ -174,6 +178,7 @@ container_create() {
                  --volume /:/media/root:rslave \
                  --volume /dev:/dev:rslave \
                  --volume /etc/machine-id:/etc/machine-id:ro \
+                 $VOLUMES \
                  "$TOOLBOX_IMAGE" sleep +Inf 2>&1; then
         echo "$0: failed to create container '$TOOLBOX_NAME'"
         exit 1
