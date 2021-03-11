@@ -146,7 +146,7 @@ image_runlabel() {
 }
 
 image_pull() {
-    if [ -z ${SUDO} ]; then
+    if [ -z ${SUDO} ] && [ $(id -u) -ne 0 ]; then
         if [ ! `grep $USER /etc/subuid` ] || [ ! `grep $USER /etc/subgid` ]; then
             echo "$0: ERROR: rootless mode wanted but no subuid and/or subgid for user '$USER'"
             echo " Toolbox will only work for this user if rootless podman is configured properly."
