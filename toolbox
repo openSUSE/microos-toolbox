@@ -162,6 +162,7 @@ image_pull() {
 
 list() {
     ${SUDO} podman ps --all
+    exit $?
 }
 
 container_create() {
@@ -173,7 +174,9 @@ container_create() {
                  --security-opt label=disable ${CREATE_AS_USER} \
                  --volume /:/media/root:rslave \
                  --volume /dev:/dev:rslave \
+                 --volume /sys:/sys:rslave \
                  --volume /etc/machine-id:/etc/machine-id:ro \
+                 --volume /etc/localtime:/etc/localtime:ro \
                  "$TOOLBOX_IMAGE" sleep +Inf 2>&1; then
         echo "$0: failed to create container '$TOOLBOX_NAME'"
         exit 1
@@ -335,6 +338,12 @@ main() {
         esac
     done
 
+    # Handle list before setting up the cleanup trap, as we won't need
+    # to try to stop the container, in that case
+    if [ "$COMMAND" == "list" ]; then
+        list
+    fi
+
     # Don't call trap before, else we will cleanup stuff
     # where nothing is to cleanup and report wrong error
     trap cleanup EXIT
@@ -370,9 +379,6 @@ main() {
     fi
 
     case $COMMAND in
-        list)
-            list
-            ;;
         create)
             create
             ;;
