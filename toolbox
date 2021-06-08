@@ -202,7 +202,7 @@ container_exec() {
             --env LANG="$LANG" \
             --env TERM="$TERM" \
             --interactive \
-            --tty ${EXEC_AS_USER} \
+            --tty "${EXEC_AS_USER[@]}" \
             "$TOOLBOX_NAME" \
             "$@"
 }
@@ -369,9 +369,9 @@ main() {
         CREATE_AS_USER="--pid host --ipc host --userns=keep-id --user root:root $VOLUMES"
         for ENV in $USER_ENV ; do
             eval VAL="$""$ENV"
-            [[ -n "$VAL" ]] && USER_ENV_STR="$USER_ENV_STR --env $ENV=$VAL"
+            [[ -n "$VAL" ]] && USER_ENV_ARR+=(--env "$ENV=$VAL")
         done
-        EXEC_AS_USER="--user ${USER_ID}:${USER_GID} -w $(pwd) $USER_ENV_STR"
+        EXEC_AS_USER=(--user "${USER_ID}:${USER_GID}" -w "$(pwd)" "${USER_ENV_ARR[@]}")
     fi
 
     if [ -n "$TAG" ]; then
