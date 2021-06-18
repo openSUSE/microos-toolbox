@@ -170,6 +170,8 @@ container_create() {
                  --hostname "$TOOLBOX_NAME" \
                  --name "$TOOLBOX_NAME" \
                  --network host \
+                 --pid host \
+                 --ipc host \
                  --privileged \
                  --security-opt label=disable ${CREATE_AS_USER} \
                  --volume /:/media/root:rslave \
@@ -366,7 +368,7 @@ main() {
         test -d "${HOME}" && VOLUMES="$VOLUMES --volume ${HOME}:${HOME}"
         test -d "/run/user/${USER_ID}" && VOLUMES="$VOLUMES --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave"
         test -d /run/media && VOLUMES="$VOLUMES --volume /run/media/:/run/media/:rslave"
-        CREATE_AS_USER="--pid host --ipc host --userns=keep-id --user root:root $VOLUMES"
+        CREATE_AS_USER="--userns=keep-id --user root:root $VOLUMES"
         for ENV in $USER_ENV ; do
             eval VAL="$""$ENV"
             [[ -n "$VAL" ]] && USER_ENV_ARR+=(--env "$ENV=$VAL")
