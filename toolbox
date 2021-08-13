@@ -373,7 +373,11 @@ main() {
         test -d "${HOME}" && VOLUMES="$VOLUMES --volume ${HOME}:${HOME}"
         test -d "/run/user/${USER_ID}" && VOLUMES="$VOLUMES --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave"
         test -d /run/media && VOLUMES="$VOLUMES --volume /run/media/:/run/media/:rslave"
-        CREATE_AS_USER="--userns=keep-id --user root:root $VOLUMES"
+        if  [[ "$CLI" == "podman" ]]; then
+            CREATE_AS_USER="--userns=keep-id --user root:root $VOLUMES"
+        elif  [[ "$CLI" == "docker" ]]; then
+            CREATE_AS_USER="--user root:root $VOLUMES"
+        fi
         for ENV in $USER_ENV ; do
             eval VAL="$""$ENV"
             [[ -n "$VAL" ]] && USER_ENV_ARR+=(--env "$ENV=$VAL")
