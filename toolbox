@@ -24,6 +24,11 @@ TOOLBOXRC="${HOME}"/.toolboxrc
 TOOLBOX_SHELL="/bin/bash"
 SUDO=
 
+CLI=podman
+if [[ ! -f /usr/bin/podman ]] && [[ -f /usr/bin/docker ]]; then
+    CLI=docker
+fi
+
 test -f /usr/etc/toolboxrc && . /usr/etc/toolboxrc
 test -f /etc/toolboxrc && . /etc/toolboxrc
 
@@ -79,13 +84,13 @@ create() {
         [[ -n "${CREATE_AS_USER}" ]] && SETUP_USER=true
     else
         echo "Container '$TOOLBOX_NAME' already exists. Trying to start..."
-        echo "(To remove the container and start with a fresh toolbox, run: podman rm '$TOOLBOX_NAME')"
+        echo "(To remove the container and start with a fresh toolbox, run: $CLI rm '$TOOLBOX_NAME')"
         msg="start"
     fi
 
     local state
     state=$(container_state)
-    if [[ "$state" == configured ]] || [[ "$state" == exited ]] || [[ "$state" == stopped ]]; then
+    if [[ "$state" == configured ]] || [[ "$state" == exited ]] || [[ "$state" == stopped ]] ; then
         container_start
     elif [[ "$state" != running ]]; then
         echo "Container '$TOOLBOX_NAME' in unknown state: '$state'"
@@ -110,8 +115,8 @@ if ! command -v sudo &> /dev/null ; then
 fi
 mkdir -p /etc/sudoers.d/ && echo "${USER_NAME} ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/${USER_NAME}
 EOF
-        ${SUDO} podman exec --user root "${TOOLBOX_NAME}" bash "${tmp_user_setup}" &> "${tmp_user_setup_log}"
-        ${SUDO} podman exec --user root "${TOOLBOX_NAME}" rm "${tmp_user_setup}"
+        ${SUDO} $CLI exec --user root "${TOOLBOX_NAME}" bash "${tmp_user_setup}" &> "${tmp_user_setup_log}"
+        ${SUDO} $CLI exec --user root "${TOOLBOX_NAME}" rm "${tmp_user_setup}"
     fi
 
     echo "Container ${msg}ed."
@@ -125,31 +130,31 @@ run() {
 }
 
 cleanup() {
-    ${SUDO} podman stop "$TOOLBOX_NAME" &>/dev/null
+    ${SUDO} $CLI stop "$TOOLBOX_NAME" &>/dev/null
     ${SUDO} rm -f $tmp_user_setup
 }
 
 container_exists() {
-    ${SUDO} podman inspect "$TOOLBOX_NAME" &>/dev/null
+    ${SUDO} $CLI inspect "$TOOLBOX_NAME" &>/dev/null
 }
 
 container_state() {
-    ${SUDO} podman inspect "$TOOLBOX_NAME" --format '{{.State.Status}}'
+    ${SUDO} $CLI inspect "$TOOLBOX_NAME" --format '{{.State.Status}}'
 }
 
 image_exists() {
-    ${SUDO} podman inspect "$TOOLBOX_IMAGE" &>/dev/null
+    ${SUDO} $CLI inspect "$TOOLBOX_IMAGE" &>/dev/null
 }
 
 image_runlabel() {
-    ${SUDO} podman container runlabel --display RUN "$TOOLBOX_IMAGE" 2> /dev/null
+    ${SUDO} $CLI container runlabel --display RUN "$TOOLBOX_IMAGE" 2> /dev/null
 }
 
 image_pull() {
     if [ -z ${SUDO} ] && [ $(id -u) -ne 0 ]; then
         if [ ! `grep $USER /etc/subuid` ] || [ ! `grep $USER /etc/subgid` ]; then
             echo "$0: ERROR: rootless mode wanted but no subuid and/or subgid for user '$USER'"
-            echo " Toolbox will only work for this user if rootless podman is configured properly."
+            echo " Toolbox will only work for this user if rootless $CLI is configured properly."
             echo " consider doing something like this:"
             echo "    sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 $USER"
             echo " and then restart."
@@ -157,16 +162,16 @@ image_pull() {
             exit 1
         fi
     fi
-    ${SUDO} podman pull "$TOOLBOX_IMAGE"
+    ${SUDO} $CLI pull "$TOOLBOX_IMAGE"
 }
 
 list() {
-    ${SUDO} podman ps --all
+    ${SUDO} $CLI ps --all
     exit $?
 }
 
 container_create() {
-    if ! ${SUDO} podman create \
+    if ! ${SUDO} $CLI create \
                  --hostname "$TOOLBOX_NAME" \
                  --name "$TOOLBOX_NAME" \
                  --network host \
@@ -186,21 +191,21 @@ container_create() {
 }
 
 container_start() {
-    if ! ${SUDO} podman start "$TOOLBOX_NAME" 2>&1; then
+    if ! ${SUDO} $CLI start "$TOOLBOX_NAME" 2>&1; then
         echo "$0: failed to start container '$TOOLBOX_NAME'"
         exit 1
     fi
 }
 
 container_runlabel() {
-    if ! ${SUDO} podman container runlabel --name "$TOOLBOX_NAME" RUN "$TOOLBOX_IMAGE" 2>&1; then
+    if ! ${SUDO} $CLI container runlabel --name "$TOOLBOX_NAME" RUN "$TOOLBOX_IMAGE" 2>&1; then
         echo "$0: failed to runlabel on image '$TOOLBOX_IMAGE'"
         exit 1
     fi
 }
 
 container_exec() {
-    ${SUDO} podman exec \
+    ${SUDO} $CLI exec \
             --env LANG="$LANG" \
             --env TERM="$TERM" \
             --interactive \
@@ -215,7 +220,7 @@ show_help() {
         [[-t/--tag <tag>]|[-c/--container <name>]] [command_to_run]]
 toolbox is a small script that launches a container to let you bring in your favorite debugging or admin tools.
 The toolbox container is a pet container and will be restarted on following runs.
-To remove the container and start fresh, do podman rm ${TOOLBOX_NAME}.
+To remove the container and start fresh, do $CLI rm ${TOOLBOX_NAME}.
 
 Commands are optional and imply user mode (-u):
  list: List existing toolboxes
@@ -226,7 +231,7 @@ Commands are optional and imply user mode (-u):
 Options:
   -h/--help: Shows this help message
   -u/--user: Run as the current user inside the container
-  -r/--root: Runs podman via sudo as root
+  -r/--root: Runs $CLI via sudo as root
   -t/--tag <tag>: Add <tag> to the toolbox name
   -c/--container <name>: Set the name of the toolbox to be equal to <name>
                          (use this alternatively to -t)
