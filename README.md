@@ -7,7 +7,7 @@ You can also install and run GUI applications in your `toolbox` container. The r
 
 ## Usage
 
-The following options are avialbe in `toolbox`:
+The following options are available in `toolbox`:
 * `-h` or `--help`: Shows the help message
 * `-u` or `--user`: Run as the current user inside the container
 * `-R` or `--reg` `<registry>`: Explicitly specify the registry to use
