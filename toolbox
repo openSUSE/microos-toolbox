@@ -178,6 +178,7 @@ container_create() {
                  --pid host \
                  --ipc host \
                  --privileged \
+                 --device /dev/net/tun \
                  --security-opt label=disable ${CREATE_AS_USER} \
                  --volume /:/media/root:rslave \
                  --volume /dev:/dev:rslave \
@@ -371,6 +372,14 @@ main() {
         # can modify the user's name, groups, etc, within the container.
         VOLUMES="--volume /tmp:/tmp:rslave"
         test -d "${HOME}" && VOLUMES="$VOLUMES --volume ${HOME}:${HOME}"
+
+        #Add any symlinked directories to the mounts
+        readarray -d '' HOME_MOUNTS < <(find ${HOME} -maxdepth 1 -type l -print0)
+        for HOME_MOUNT in "${HOME_MOUNTS[@]}"
+        do
+            test -x $HOME_MOUNT && VOLUMES="$VOLUMES --volume $HOME_MOUNT:$HOME_MOUNT"
+        done
+
         test -d "/run/user/${USER_ID}" && VOLUMES="$VOLUMES --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave"
         test -d /run/media && VOLUMES="$VOLUMES --volume /run/media/:/run/media/:rslave"
         if  [[ "$CLI" == "podman" ]]; then
@@ -399,7 +408,12 @@ main() {
             else
                 run "$@"
             fi
-            cleanup
+            #If nothing else is running, stop the container. Otherwise unset exit trap
+            if [ `${CLI} stats --no-stream --no-reset --format="{{.PIDS}}" ${TOOLBOX_NAME}` -lt 2 ]; then
+                cleanup
+            else
+                trap - EXIT
+            fi
             ;;
         *)
             echo "unknown command: '$COMMAND'"
