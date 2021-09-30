@@ -33,7 +33,8 @@ do
             APPLICATION_NAME=`sed "s/.desktop$//" <<< ${APPLICATION_NAME}`
             APPLICATION_NAME="${APPLICATION_NAME}-on-${HOSTNAME}.desktop"
 
-            sed "s/Exec=/Exec=toolbox -u -c ${HOSTNAME} /g" $RPM_FILE | sed '/^TryExec/d' | \
+            sed "s/Exec=/Exec=toolbox -u -c ${HOSTNAME} -- /g" $RPM_FILE | \
+                sed '/^TryExec/d' | \
                 sed "s/^Name=.*/& on ${HOSTNAME}/g" | \
                 sed "s/^Icon=/Icon=${HOSTNAME}-${ADDED_RPM}-/g" \
                 > ${HOME}/.local/share/applications/${APPLICATION_NAME}
@@ -61,7 +62,7 @@ do
         echo "REMOVED DESKTOP FILE: ${APPLICATION}"
         rm $APPLICATION
     done
-    find ${HOME}/.local/share/icons -iname "*${HOSTNAME}-${REMOVED_RPM}-*" -delete
+    find ${HOME}/.local/share/icons -name "*${HOSTNAME}-${REMOVED_RPM}-*" -delete
 done
 
 exit 0
