@@ -1,8 +1,18 @@
 # toolbox - bring your own tools with you
 
-The purpose of this fork is to extend toolbox for use as a main environment on openSUSE MicroOS. Long-term, it may be extended to Fedora Silverblue, Ubuntu Core, or other read-only rootfs operating systems.
+The purpose of this fork is to extend toolbox for use as a main environment on openSUSE MicroOS. Long-term, it may be extended to Fedora Silverblue, Ubuntu Core, or other read-only rootfs operating systems. The script currently supports deb and rpm based distros in the container. It should be distro-agnostic regarding the host.
 
-**Fork goals: Replace installing software for the user on MicroOS with a new command that snapshots the container (podman commit), runs through a script to bring in icon and desktop files, and cleans up old snapshots. Currently a script exists to loop through every installed package and searching for relevant ones and modifying them to work and be identified with a container. It needs to be optimized, and a cleanup script should be added for container deletion. Possibly implement container deletion as a new option to toolbox.**
+**Fork goals: Replace installing software for the user on MicroOS with a new command that snapshots the container (podman commit), runs through a script to bring in icon and desktop files, and cleans up old snapshots. Currently a script exists to loop through every installed package and search for relevant ones and modifying them to work and be identified with a container. A cleanup script needs to be added for container deletion. Possibly implement container deletion as a new option to toolbox.**
+
+Still needs implementation:
+
+    1. Snapshots of containers
+
+    2. An easy method of restoring a container to a snapshot
+
+    3. Autotomatic snapshot management
+
+    4. A less hacky approach to keeping track of installed packages
 
 On systems using `transactional-update` it is not really possible - due to the read-only root filesystem - to install tools to analyze problems in the currently running system as a reboot is always required. This makes it next to impossible to debug such problems.
 `toolbox` is a small script that launches a podman container in a rootless or rootfull state to let you bring in your favorite debugging or admin tools in such a system.
