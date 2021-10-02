@@ -7,61 +7,49 @@
 
 declare -a REMOVED_PACKAGES
 declare -a ADDED_PACKAGES
-DISTRO_TYPE="rpm"
 
 if [ -x "$(command -v rpm)" ]
 then
-    if [ -e ${HOME}/.config/toolbox/packages-${HOSTNAME} ]; then
-        REMOVED_PACKAGES=( $(diff --changed-group-format='%>' \
-            --unchanged-group-format='' \
-            - ${HOME}/.config/toolbox/packages-${HOSTNAME} <<< `rpm -qa`) )
-        ADDED_PACKAGES=( $(diff --changed-group-format='%<' \
-            --unchanged-group-format='' \
-            - ${HOME}/.config/toolbox/packages-${HOSTNAME} <<< `rpm -qa`) )
-    else
-        [ ! -d ${HOME}/.config/toolbox ] && mkdir -p ${HOME}/.config/toolbox
-        ADDED_PACKAGES=( $(rpm -qa) )
-    fi
-    rpm -qa > ${HOME}/.config/toolbox/packages-${HOSTNAME}
+    LIST_ALL_PACKAGES="rpm -qa"
+    LIST_PACKAGE_CONTENTS="rpm -ql"
 elif [ -x "$(command -v dpkg-query)" ]
 then
-    DISTRO_TYPE="deb"
-    if [ -e ${HOME}/.config/toolbox/packages-${HOSTNAME} ]; then
-        REMOVED_PACKAGES=( $(diff --changed-group-format='%>' \
-            --unchanged-group-format='' \
-            - ${HOME}/.config/toolbox/packages-${HOSTNAME} <<< `dpkg-query -f '${binary:Package}\n' -W`) )
-        ADDED_PACKAGES=( $(diff --changed-group-format='%<' \
-            --unchanged-group-format='' \
-            - ${HOME}/.config/toolbox/packages-${HOSTNAME} <<< `dpkg-query -f '${binary:Package}\n' -W`) )
-    else
-        [ ! -d ${HOME}/.config/toolbox ] && mkdir -p ${HOME}/.config/toolbox
-        ADDED_PACKAGES=( $(dpkg-query -f '${binary:Package}\n' -W) )
-    fi
-    dpkg-query -f '${binary:Package}\n' -W > ${HOME}/.config/toolbox/packages-${HOSTNAME}
+    LIST_ALL_PACKAGES="dpkg-query -f \${binary:Package}\n -W"
+    LIST_PACKAGE_CONTENTS="dpkg-query -L"
 else
     echo "Meme distros are not supported."
     exit 1
 fi
 
+if [ -e ${HOME}/.config/toolbox/packages-${HOSTNAME} ]; then
+    REMOVED_PACKAGES=( $(diff --changed-group-format='%>' \
+        --unchanged-group-format='' \
+        - ${HOME}/.config/toolbox/packages-${HOSTNAME} <<< `$LIST_ALL_PACKAGES`) )
+    ADDED_PACKAGES=( $(diff --changed-group-format='%<' \
+        --unchanged-group-format='' \
+        - ${HOME}/.config/toolbox/packages-${HOSTNAME} <<< `$LIST_ALL_PACKAGES`) )
+else
+    [ ! -d ${HOME}/.config/toolbox ] && mkdir -p ${HOME}/.config/toolbox
+    ADDED_PACKAGES=( $($LIST_ALL_PACKAGES) )
+fi
+$LIST_ALL_PACKAGES > ${HOME}/.config/toolbox/packages-${HOSTNAME}
+
+
+
 for ADDED_PACKAGE in "${ADDED_PACKAGES[@]}"
 do
     echo "ADDED PACKAGE: ${ADDED_PACKAGE}"
 
-    if [ "$DISTRO_TYPE" = "rpm" ]
-    then
-        PACKAGE_FILES=( $(rpm -ql ${ADDED_PACKAGE}) )
-    elif [ "$DISTRO_TYPE" = "deb" ]
-    then
-        PACKAGE_FILES=( $(dpkg-query -L ${ADDED_PACKAGE}) )
-    else
-        echo "How did you get here? BTW, I use Arch."
-        exit 1
-    fi
+    #Will hold all icons we need
+    declare -a ICONS=()
+
+    PACKAGE_FILES=( $($LIST_PACKAGE_CONTENTS ${ADDED_PACKAGE}) )
 
     for PACKAGE_FILE in "${PACKAGE_FILES[@]}"
     do
-        if [[ "$PACKAGE_FILE" =~ .*\.desktop$ ]]
+        if [[ "$PACKAGE_FILE" =~ .*applications.*\.desktop$ ]]
         then
+            #Create desktop file for container host
             APPLICATION_NAME=`basename ${PACKAGE_FILE}`
             APPLICATION_NAME=`sed "s/.desktop$//" <<< ${APPLICATION_NAME}`
             APPLICATION_NAME="${APPLICATION_NAME}-on-${HOSTNAME}.desktop"
@@ -72,32 +60,39 @@ do
                 sed "s/^Icon=/Icon=${HOSTNAME}-${ADDED_PACKAGE}-/g" \
                 > ${HOME}/.local/share/applications/${APPLICATION_NAME}
 
-            echo "#${ADDED_PACKAGE}" >> ${HOME}/.local/share/applications/${APPLICATION_NAME}
+            echo "#${ADDED_PACKAGE}-${HOSTNAME}" >> ${HOME}/.local/share/applications/${APPLICATION_NAME}
             echo "ADDED DESKTOP FILE: ${HOME}/.local/share/applications/${APPLICATION_NAME}"
-        elif [[ "$PACKAGE_FILE" =~ ^.*\/icons\/.*\..*$ ]] || [[ "$PACKAGE_FILE" =~ ^.*\/pixmaps\/.*\..*$ ]]
-        then
-            ICON_NAME=`basename ${PACKAGE_FILE}`
-            ICON_PATH=`dirname ${PACKAGE_FILE}`
-            LOCAL_ICON_PATH=`dirname ${PACKAGE_FILE} | sed "s|^.*icons|${HOME}/.local/share/icons|" | \
-                sed "s|^.*pixmaps|${HOME}/.local/share/pixmaps|"`
-            LOCAL_ICON_NAME=${HOSTNAME}-${ADDED_PACKAGE}-${ICON_NAME}
-            [ ! -d $LOCAL_ICON_PATH ] && mkdir -p $LOCAL_ICON_PATH
-            cp ${ICON_PATH}/${ICON_NAME} ${LOCAL_ICON_PATH}/${LOCAL_ICON_NAME}
+
+            #Find icon to copy to container HOSTNAME
+            ICONS+=( $(sed -n "/Icon=/s/Icon=//p" $PACKAGE_FILE | \
+            xargs -I % find /usr/share/icons /usr/share/pixmaps -name "%*") )
         fi
+    done
+
+    for ICON in "${ICONS[@]}"
+    do
+        echo $ICON
+        ICON_NAME=`basename ${ICON}`
+        ICON_PATH=`dirname ${ICON}`
+        LOCAL_ICON_PATH=`dirname ${ICON} | sed "s|^.*icons|${HOME}/.local/share/icons|" | \
+            sed "s|^.*pixmaps|${HOME}/.local/share/pixmaps|"`
+        LOCAL_ICON_NAME=${HOSTNAME}-${ADDED_PACKAGE}-${ICON_NAME}
+        [ ! -d $LOCAL_ICON_PATH ] && mkdir -p $LOCAL_ICON_PATH
+        cp ${ICON_PATH}/${ICON_NAME} ${LOCAL_ICON_PATH}/${LOCAL_ICON_NAME}
     done
 done
 
 for REMOVED_PACKAGE in "${REMOVED_PACKAGES[@]}"
 do
     echo "REMOVED PACKAGE: ${REMOVED_PACKAGE}"
-    APPLICATIONS=( $(grep -Ilr ${REMOVED_PACKAGE} ${HOME}/.local/share/applications/) )
+    APPLICATIONS=( $(grep -Ilr ${REMOVED_PACKAGE}-${HOSTNAME} ${HOME}/.local/share/applications/) )
     for APPLICATION in "${APPLICATIONS[@]}"
     do
         echo "REMOVED DESKTOP FILE: ${APPLICATION}"
         rm $APPLICATION
     done
-    echo "${HOME}/.local/share/icons -name \"*${HOSTNAME}-${REMOVED_PACKAGE}-*\""
     find ${HOME}/.local/share/icons -name "*${HOSTNAME}-${REMOVED_PACKAGE}-*" -delete
+    find ${HOME}/.local/share/pixmaps -name "*${HOSTNAME}-${REMOVED_PACKAGE}-*" -delete
 done
 
 exit 0
