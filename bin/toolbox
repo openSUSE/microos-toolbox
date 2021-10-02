@@ -374,7 +374,7 @@ main() {
         test -d "${HOME}" && VOLUMES="$VOLUMES --volume ${HOME}:${HOME}"
 
         #Add any symlinked directories to the mounts
-        readarray -d '' HOME_MOUNTS < <(find ${HOME} -maxdepth 1 -type l -print0)
+        readarray -d '' HOME_MOUNTS < <(find ${HOME} -maxdepth 3 type l -print0)
         for HOME_MOUNT in "${HOME_MOUNTS[@]}"
         do
             test -x $HOME_MOUNT && VOLUMES="$VOLUMES --volume $HOME_MOUNT:$HOME_MOUNT"
