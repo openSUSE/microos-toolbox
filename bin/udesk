@@ -3,10 +3,8 @@
 #Create user applications directory if needed
 [ ! -d ${HOME}/.local/share/applications ] && mkdir -p ${HOME}/.local/share/applications
 
-#if it's marked as removed, delete desktop file. if it's a new rpm, search and replace.
-
-declare -a REMOVED_PACKAGES
-declare -a ADDED_PACKAGES
+declare -a REMOVED_PACKAGES=()
+declare -a ADDED_PACKAGES=()
 
 if [ -x "$(command -v rpm)" ]
 then
