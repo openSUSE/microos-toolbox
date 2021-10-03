@@ -15,7 +15,7 @@ then
     LIST_ALL_PACKAGES="dpkg-query -f \${binary:Package}\n -W"
     LIST_PACKAGE_CONTENTS="dpkg-query -L"
 else
-    echo "Meme distros are not supported."
+    echo "Only deb and rpm based distros are currently supported"
     exit 1
 fi
 
