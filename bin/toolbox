@@ -125,7 +125,7 @@ EOF
 run() {
     create
 
-    echo "Entering container. To exit, type 'exit'."
+    echo "Entering container. To exit, ype 'exit'."
     container_exec "$@"
 }
 
@@ -178,7 +178,6 @@ container_create() {
                  --pid host \
                  --ipc host \
                  --privileged \
-                 --device /dev/net/tun \
                  --security-opt label=disable ${CREATE_AS_USER} \
                  --volume /:/media/root:rslave \
                  --volume /dev:/dev:rslave \
