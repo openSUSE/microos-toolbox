@@ -103,6 +103,13 @@ if ! command -v sudo &> /dev/null ; then
   fi
 fi
 mkdir -p /etc/sudoers.d/ && echo "${USER_NAME} ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/${USER_NAME}
+# Avoid issues when updating some packages
+if [ -d "/usr/lib/rpm/macros.d/" ]; then
+  # Problematic packages are (on openSUSE):
+  # - filesystem: touches /dev
+  # - netcfg: touches /etc/hosts
+  echo "%_netsharedpath /dev/:/etc/hosts" > /usr/lib/rpm/macros.d/macros.microos-toolbox
+fi
 EOF
         ${SUDO} $CLI exec --user root "${TOOLBOX_NAME}" bash "${tmp_user_setup}" &> "${tmp_user_setup_log}"
         ${SUDO} $CLI exec --user root "${TOOLBOX_NAME}" rm "${tmp_user_setup}"
