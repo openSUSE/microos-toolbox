@@ -10,6 +10,7 @@ You can also install and run GUI applications in your `toolbox` container. The r
 The following options are available in `toolbox`:
 * `-h` or `--help`: Shows the help message
 * `-u` or `--user`: Run as the current user inside the container
+* `-n` or `--nostop`: Do not stop container on exit, allowing multiple sessions to the same toolbox
 * `-R` or `--reg` `<registry>`: Explicitly specify the registry to use
 * `-I` or `--img` `<image>`: Explicitly specify the image to pull
 * `-i` or `--image` `<image>`: Full URI of the image to pull (alternative to `-R` & `-I`)
