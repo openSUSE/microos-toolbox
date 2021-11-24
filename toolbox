@@ -130,7 +130,10 @@ run() {
 }
 
 cleanup() {
-    ${SUDO} $CLI stop "$TOOLBOX_NAME" &>/dev/null
+    if [ -z "$NO_STOP" ]; then
+	${SUDO} $CLI stop "$TOOLBOX_NAME" &>/dev/null
+    fi
+
     ${SUDO} rm -f $tmp_user_setup
 }
 
@@ -215,7 +218,7 @@ container_exec() {
 }
 
 show_help() {
-    echo "USAGE: toolbox [[-h/--help] | [command] [-r/--root] [-u/--user]
+    echo "USAGE: toolbox [[-h/--help] | [command] [-r/--root] [-u/--user] [-n/--nostop]
         [[-R/--reg <registry>] [-I/--img <image>]|[-i/--image <image_URI>]]
         [[-t/--tag <tag>]|[-c/--container <name>]] [command_to_run]]
 toolbox is a small script that launches a container to let you bring in your favorite debugging or admin tools.
@@ -232,6 +235,8 @@ Options:
   -h/--help: Shows this help message
   -u/--user: Run as the current user inside the container
   -r/--root: Runs $CLI via sudo as root
+  -n/--nostop: Does not stop the container on exit, allowing multiple
+               sessions to use the same toolbox at once
   -t/--tag <tag>: Add <tag> to the toolbox name
   -c/--container <name>: Set the name of the toolbox to be equal to <name>
                          (use this alternatively to -t)
@@ -284,7 +289,7 @@ main() {
         esac
     fi
 
-    ARGS=$(getopt -o hrut:R:I:c:i: --long help,root,user,tag:,reg:,img:,container:,image: -n toolbox -- "$@")
+    ARGS=$(getopt -o hrunt:R:I:c:i: --long help,root,user,nostop,tag:,reg:,img:,container:,image: -n toolbox -- "$@")
     eval set -- "$ARGS"
     while true; do
         case "$1" in
@@ -300,6 +305,10 @@ main() {
             -u|--user)
                 shift
                 MODE="user"
+                ;;
+            -n|--nostop)
+                NO_STOP="true"
+                shift
                 ;;
             -c|--container)
                 if [ -n "$TAG" ]; then
