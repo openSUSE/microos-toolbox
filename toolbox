@@ -18,7 +18,7 @@ set -eo pipefail
 
 # Defaults
 REGISTRY=registry.opensuse.org
-IMAGE=opensuse/nginx
+IMAGE=opensuse/toolbox
 TOOLBOX_NAME=toolbox-"${USER}"
 TOOLBOXRC="${HOME}"/.toolboxrc
 TOOLBOX_SHELL="/bin/bash"
