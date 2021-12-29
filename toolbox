@@ -64,14 +64,14 @@ setup() {
 }
 
 create() {
-    if ! image_exists; then
-        image_pull
-    fi
-
     local msg="creat"
-    local runlabel
-    runlabel=$(image_runlabel) ||:
     if ! container_exists; then
+        local runlabel
+        runlabel=$(image_runlabel) ||:
+        if ! image_exists; then
+            image_pull
+        fi
+	
         echo "Spawning a container '$TOOLBOX_NAME' with image '$TOOLBOX_IMAGE'"
         if [[ -z "$runlabel" ]]; then
             container_create
