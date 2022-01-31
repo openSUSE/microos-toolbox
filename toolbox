@@ -174,17 +174,17 @@ list() {
 }
 
 container_create() {
+    if [ -z "$SANDBOX" ]; then
+        # this is the default behavior, unless --sandbox is specified
+        CREATE_NO_SANDBOX="--volume /dev:/dev:rslave --volume /sys:/sys:rslave --volume /:/media/root:rslave"
+        CREATE_NO_SANDBOX="$CREATE_NO_SANDBOX --privileged --security-opt label=disable --pid host --ipc host"
+    fi
     if ! ${SUDO} $CLI create \
                  --hostname "$TOOLBOX_NAME" \
                  --name "$TOOLBOX_NAME" \
                  --network host \
-                 --pid host \
-                 --ipc host \
-                 --privileged \
-                 --security-opt label=disable ${CREATE_AS_USER} \
-                 --volume /:/media/root:rslave \
-                 --volume /dev:/dev:rslave \
-                 --volume /sys:/sys:rslave \
+                 ${CREATE_NO_SANDBOX} \
+                 ${CREATE_AS_USER} \
                  --volume /etc/machine-id:/etc/machine-id:ro \
                  --volume /etc/localtime:/etc/localtime:ro \
                  "$TOOLBOX_IMAGE" sleep +Inf 2>&1; then
@@ -219,7 +219,7 @@ container_exec() {
 
 show_help() {
     echo "USAGE: toolbox [[-h/--help] | [command] [-r/--root] [-u/--user] [-n/--nostop]
-        [[-R/--reg <registry>] [-I/--img <image>]|[-i/--image <image_URI>]]
+        [-S/--sandbox] [[-R/--reg <registry>] [-I/--img <image>]|[-i/--image <image_URI>]]
         [[-t/--tag <tag>]|[-c/--container <name>]] [command_to_run]]
 toolbox is a small script that launches a container to let you bring in your favorite debugging or admin tools.
 The toolbox container is a pet container and will be restarted on following runs.
@@ -237,6 +237,10 @@ Options:
   -r/--root: Runs $CLI via sudo as root
   -n/--nostop: Does not stop the container on exit, allowing multiple
                sessions to use the same toolbox at once
+  -S/--sandbox: Start a \"less privileged than usual\" toolbox. It remains
+                true, though, that toolbox is *NOT* meant to be used for when
+                security and strong isolation are important. Always bear this
+                in mind, even when using this option.
   -t/--tag <tag>: Add <tag> to the toolbox name
   -c/--container <name>: Set the name of the toolbox to be equal to <name>
                          (use this alternatively to -t)
@@ -289,7 +293,7 @@ main() {
         esac
     fi
 
-    ARGS=$(getopt -o hrunt:R:I:c:i: --long help,root,user,nostop,tag:,reg:,img:,container:,image: -n toolbox -- "$@")
+    ARGS=$(getopt -o hrunSt:R:I:c:i: --long help,root,user,nostop,sandbox,tag:,reg:,img:,container:,image: -n toolbox -- "$@")
     eval set -- "$ARGS"
     while true; do
         case "$1" in
@@ -308,6 +312,11 @@ main() {
                 ;;
             -n|--nostop)
                 NO_STOP="true"
+                shift
+                ;;
+            -S|--sandbox)
+                echo "WARNING: toolbox is not for sandboxing. Using -S removes some privileges, but don't feel too safe!!!"
+                SANDBOX="true"
                 shift
                 ;;
             -c|--container)
