@@ -66,7 +66,7 @@ setup() {
 create() {
     local msg="creat"
     if ! container_exists; then
-        if ! image_exists; then
+        if ! image_exists || [ -z "$NO_PULL" ]; then
             image_pull
         fi
         local runlabel
@@ -219,7 +219,7 @@ container_exec() {
 
 show_help() {
     echo "USAGE: toolbox [[-h/--help] | [command] [-r/--root] [-u/--user] [-n/--nostop]
-        [-S/--sandbox] [[-R/--reg <registry>] [-I/--img <image>]|[-i/--image <image_URI>]]
+        [-S/--sandbox] [-P/--no-pull] [[-R/--reg <registry>] [-I/--img <image>]|[-i/--image <image_URI>]]
         [[-t/--tag <tag>]|[-c/--container <name>]] [command_to_run]]
 toolbox is a small script that launches a container to let you bring in your favorite debugging or admin tools.
 The toolbox container is a pet container and will be restarted on following runs.
@@ -241,6 +241,9 @@ Options:
                 true, though, that toolbox is *NOT* meant to be used for when
                 security and strong isolation are important. Always bear this
                 in mind, even when using this option.
+  -P/--no-pull: Skip trying to update the image, if it already exists. This
+                may speedup toolbox creation, but at the risk of creating the
+                toolbox out of a potentially (very?) old image.
   -t/--tag <tag>: Add <tag> to the toolbox name
   -c/--container <name>: Set the name of the toolbox to be equal to <name>
                          (use this alternatively to -t)
@@ -293,7 +296,7 @@ main() {
         esac
     fi
 
-    ARGS=$(getopt -o hrunSt:R:I:c:i: --long help,root,user,nostop,sandbox,tag:,reg:,img:,container:,image: -n toolbox -- "$@")
+    ARGS=$(getopt -o hrunSPt:R:I:c:i: --long help,root,user,nostop,sandbox,no-pull,tag:,reg:,img:,container:,image: -n toolbox -- "$@")
     eval set -- "$ARGS"
     while true; do
         case "$1" in
@@ -317,6 +320,10 @@ main() {
             -S|--sandbox)
                 echo "WARNING: toolbox is not for sandboxing. Using -S removes some privileges, but don't feel too safe!!!"
                 SANDBOX="true"
+                shift
+                ;;
+            -P|--no-pull)
+                NO_PULL="true"
                 shift
                 ;;
             -c|--container)
