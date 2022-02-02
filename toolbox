@@ -94,7 +94,13 @@ create() {
 groupadd -g ${USER_GID} ${USER_GNAME}
 useradd -M -N -g ${USER_GNAME} -u ${USER_ID} ${USER_NAME}
 if ! command -v sudo &> /dev/null ; then
-  zypper install -y --no-recommends sudo
+  if command -v zypper &> /dev/null ; then
+    zypper install -y --no-recommends sudo
+  elif command -v apt &> /dev/null ; then
+    apt update && apt -y install sudo
+  elif command -v dnf ; then
+    dnf install -y sudo
+  fi
 fi
 mkdir -p /etc/sudoers.d/ && echo "${USER_NAME} ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/${USER_NAME}
 EOF
