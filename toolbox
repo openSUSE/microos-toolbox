@@ -133,8 +133,6 @@ cleanup() {
     if [ -z "$NO_STOP" ]; then
 	${SUDO} $CLI stop "$TOOLBOX_NAME" &>/dev/null
     fi
-
-    ${SUDO} rm -f $tmp_user_setup
 }
 
 container_exists() {
@@ -142,7 +140,7 @@ container_exists() {
 }
 
 container_state() {
-    ${SUDO} $CLI inspect "$TOOLBOX_NAME" --format '{{.State.Status}}'
+    ${SUDO} $CLI inspect "$TOOLBOX_NAME" --format '{{.State.Status}}' 2> /dev/null
 }
 
 image_exists() {
@@ -187,21 +185,21 @@ container_create() {
                  ${CREATE_AS_USER} \
                  --volume /etc/machine-id:/etc/machine-id:ro \
                  --volume /etc/localtime:/etc/localtime:ro \
-                 "$TOOLBOX_IMAGE" sleep +Inf 2>&1; then
+                 "$TOOLBOX_IMAGE" sleep +Inf > /dev/null; then
         echo "$0: failed to create container '$TOOLBOX_NAME'"
         exit 1
     fi
 }
 
 container_start() {
-    if ! ${SUDO} $CLI start "$TOOLBOX_NAME" 2>&1; then
+    if ! ${SUDO} $CLI start "$TOOLBOX_NAME" > /dev/null ; then
         echo "$0: failed to start container '$TOOLBOX_NAME'"
         exit 1
     fi
 }
 
 container_runlabel() {
-    if ! ${SUDO} $CLI container runlabel --name "$TOOLBOX_NAME" RUN "$TOOLBOX_IMAGE" 2>&1; then
+    if ! ${SUDO} $CLI container runlabel --name "$TOOLBOX_NAME" RUN "$TOOLBOX_IMAGE" > /dev/null ; then
         echo "$0: failed to runlabel on image '$TOOLBOX_IMAGE'"
         exit 1
     fi
@@ -370,16 +368,6 @@ main() {
         esac
     done
 
-    # Handle list before setting up the cleanup trap, as we won't need
-    # to try to stop the container, in that case
-    if [ "$COMMAND" == "list" ]; then
-        list
-    fi
-
-    # Don't call trap before, else we will cleanup stuff
-    # where nothing is to cleanup and report wrong error
-    trap cleanup EXIT
-
     # Let's rebuild the image URI (this means that command
     # line, if present, overrides config file)
     TOOLBOX_IMAGE=$(echo "${REGISTRY}"/"${IMAGE}" | sed 's/^\///g')
@@ -415,16 +403,20 @@ main() {
     fi
 
     case $COMMAND in
-        create)
-            create
-            ;;
-        enter|run)
-            if [ -z "$*" ]; then
+        create|enter|run)
+            # Cleanup is only needed if we're really starting the container
+            trap cleanup EXIT
+
+            if [ "$COMMAND" == "create" ]; then
+                create
+            elif [ -z "$*" ]; then
                 run ${TOOLBOX_SHELL}
             else
                 run "$@"
             fi
-            cleanup
+            ;;
+        list)
+            list
             ;;
         *)
             echo "unknown command: '$COMMAND'"
