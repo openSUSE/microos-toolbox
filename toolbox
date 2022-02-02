@@ -113,7 +113,7 @@ run() {
 }
 
 cleanup() {
-    if [ -z "$NO_STOP" ]; then
+    if [ $(container_active) -eq 0 ] && [ -z "$NO_STOP" ]; then
 	${SUDO} $CLI stop "$TOOLBOX_NAME" &>/dev/null
     fi
 }
@@ -124,6 +124,10 @@ container_exists() {
 
 container_state() {
     ${SUDO} $CLI inspect "$TOOLBOX_NAME" --format '{{.State.Status}}' 2> /dev/null
+}
+
+container_active() {
+    ${SUDO} $CLI inspect "$TOOLBOX_NAME" --format '{{len .ExecIDs}}' 2> /dev/null
 }
 
 image_exists() {
@@ -152,6 +156,26 @@ image_pull() {
 list() {
     ${SUDO} $CLI ps --all
     exit $?
+}
+
+stop() {
+    # We can't stop non-existing and non-running toolboxes
+    if  ! container_exists ; then
+        echo "$0: ERROR: Cannot stop non-existing container '$TOOLBOX_NAME'"
+        exit 2
+    fi
+    if [[ "$(container_state)" != "running" ]]; then
+        echo "$0: ERROR: Cannot stop non-running container '$TOOLBOX_NAME'"
+        exit 2
+    fi
+
+    # We don't stop toolboxes with active sessions
+    if [ $(container_active) -ne 0 ]; then
+        echo "$0: ERROR: The toolbox '$TOOLBOX_NAME' has active sessions. Not stopping"
+        exit 1
+    fi
+
+    ${SUDO} $CLI stop "$TOOLBOX_NAME" &> /dev/null
 }
 
 container_create() {
@@ -199,8 +223,8 @@ container_exec() {
 }
 
 show_help() {
-    echo "USAGE: toolbox [[-h/--help] | [list|create [<name>]|enter [<name>]|run] [-r/--root] [-u/--user] [-n/--nostop]
-        [-S/--sandbox] [-P/--no-pull] [[-R/--reg <registry>] [-I/--img <image>]|[-i/--image <image_URI>]]
+    echo "USAGE: toolbox [[-h/--help] | [list|create [<name>]|enter [<name>]|run|stop [<name>]] [-r/--root] [-u/--user]
+        [-n/--nostop] [-S/--sandbox] [-P/--no-pull] [[-R/--reg <registry>] [-I/--img <image>]|[-i/--image <image_URI>]]
         [[-t/--tag <tag>]|[-c/--container <name>]] [command_to_run]]
 toolbox is a small script that launches a container to let you bring in your favorite debugging or admin tools.
 The toolbox container is a pet container and will be restarted on following runs.
@@ -211,8 +235,9 @@ Commands are optional and imply user mode (-u):
  create: Just create the toolbox
  enter: Enter inside a toolbox (if it does not exist, it is created)
  run: Run command_to_run inside a toolbox (if it does not exist, it is created)
+ stop: Stop a running toolbox (_only_ if no active sessions exists for it)
 
-For the create and enter commands, the toolbox name can be specified either:
+For the create, enter and stop commands, the toolbox name can be specified either:
  - with -t/--tag, e.g.: 'toolbox enter -t dev'. For user foo, will enter 'toolbox-foo-user-dev'. Or,
  - with -c/--container, e.g.: 'toolbox create -c work'. Will create 'work'. Or
  - with just the name of the container, e.g.: 'toolbox enter test'. Will enter 'test'.
@@ -274,7 +299,7 @@ main() {
     COMMAND=run
     if [ -n "$1" ] && is_option $1 ; then
         case $1 in
-            create | list | enter | run )
+            create | list | enter | run | stop)
                 MODE="user"
                 COMMAND=$1
                 shift
@@ -415,23 +440,23 @@ main() {
         TOOLBOX_NAME="${TOOLBOX_NAME}-$TAG"
     fi
 
+    # enter, create and stop supports the name of the container being as an
+    # argument, so use if it's there. But there must be no conflict between
+    # that and the -c and -t options.
+    if [ "$COMMAND" = "enter" ] || [ "$COMMAND" = "create" ] || [ "$COMMAND" = "stop" ]; then
+        if [ $# -ge 1 ]; then
+            if [ -n "$CHANGE_NAME" ] || [ -n "$TAG" ]; then
+                echo "ERROR: Cannot determine which container to use between $TOOLBOX_NAME and $1"
+                show_help
+                exit 1
+            fi
+            TOOLBOX_NAME=$1
+            shift
+        fi
+    fi
+
     case $COMMAND in
         create|enter|run)
-            if [ "$COMMAND" = "enter" ] || [ "$COMMAND" = "create" ]; then
-                # enter and create supports the name of the container being
-                # as an argument, so use if it's there. But there must be no
-                # conflict between that and the -c and -t options.
-                if [ $# -ge 1 ]; then
-                    if [ -n "$CHANGE_NAME" ] || [ -n "$TAG" ]; then
-                        echo "ERROR: Cannot determine which container to use between $TOOLBOX_NAME and $1"
-                        show_help
-                        exit 1
-                    fi
-                    TOOLBOX_NAME=$1
-                    shift
-                fi
-            fi
-
             # Cleanup is only needed if we're really starting the container
             trap cleanup EXIT
 
@@ -445,8 +470,8 @@ main() {
                 run "$@"
             fi
             ;;
-        list)
-            list
+        list|stop)
+            $COMMAND
             ;;
         *)
             echo "unknown command: '$COMMAND'"
