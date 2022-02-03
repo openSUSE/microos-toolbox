@@ -24,35 +24,18 @@ TOOLBOXRC="${HOME}"/.toolboxrc
 TOOLBOX_SHELL="/bin/bash"
 SUDO=
 
-CLI=podman
-if [[ ! -f /usr/bin/podman ]] && [[ -f /usr/bin/docker ]]; then
+if command -v podman &> /dev/null ; then
+    CLI=podman
+elif command -v docker &> /dev/null ; then
     CLI=docker
+else
+    echo "$0: ERROR: neither 'podman' nor 'docker' are available. Exiting!"
 fi
 
 test -f /usr/etc/toolboxrc && . /usr/etc/toolboxrc
 test -f /etc/toolboxrc && . /etc/toolboxrc
 
 MODE="system"
-
-USER_ENV="DBUS_SESSION_BUS_ADDRESS \
-    DBUS_SYSTEM_BUS_ADDRESS \
-    DESKTOP_SESSION \
-    SESSION_MANAGER \
-    DISPLAY \
-    LANG \
-    SSH_AUTH_SOCK \
-    USER \
-    USERNAME \
-    WAYLAND_DISPLAY \
-    XAUTHORITY \
-    XAUTHLOCALHOSTNAME \
-    XDG_CURRENT_DESKTOP \
-    XDG_DATA_DIRS \
-    XDG_MENU_PREFIX \
-    XDG_RUNTIME_DIR \
-    XDG_SESSION_CLASS \
-    XDG_SESSION_DESKTOP \
-    XDG_SESSION_TYPE"
 
 setup() {
     # Allow user overrides
@@ -373,11 +356,36 @@ main() {
         esac
     done
 
+    ${SUDO} ${CLI} ps &> /dev/null
+    if [ $? -ne 0 ]; then
+        echo "$0: ERROR: '${CLI}' is available but does not seem to be usable. Exiting!"
+    fi
+
     # Let's rebuild the image URI (this means that command
     # line, if present, overrides config file)
     TOOLBOX_IMAGE=$(echo "${REGISTRY}"/"${IMAGE}" | sed 's/^\///g')
 
     if [ "$MODE" = "user" ]; then
+        local USER_ENV="DBUS_SESSION_BUS_ADDRESS \
+            DBUS_SYSTEM_BUS_ADDRESS \
+            DESKTOP_SESSION \
+            SESSION_MANAGER \
+            DISPLAY \
+            LANG \
+            SSH_AUTH_SOCK \
+            USER \
+            USERNAME \
+            WAYLAND_DISPLAY \
+            XAUTHORITY \
+            XAUTHLOCALHOSTNAME \
+            XDG_CURRENT_DESKTOP \
+            XDG_DATA_DIRS \
+            XDG_MENU_PREFIX \
+            XDG_RUNTIME_DIR \
+            XDG_SESSION_CLASS \
+            XDG_SESSION_DESKTOP \
+            XDG_SESSION_TYPE"
+
         USER_ID=$(id -u); USER_GID=$(id -g)
         USER_NAME=$(id -un) ; USER_GNAME=$(id -gn)
         if [ -z "$CHANGE_NAME" ]; then
