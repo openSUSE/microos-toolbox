@@ -216,7 +216,7 @@ container_exec() {
 }
 
 show_help() {
-    echo "USAGE: toolbox [[-h/--help] | [command] [-r/--root] [-u/--user] [-n/--nostop]
+    echo "USAGE: toolbox [[-h/--help] | [list|create [<name>]|enter [<name>]|run] [-r/--root] [-u/--user] [-n/--nostop]
         [-S/--sandbox] [-P/--no-pull] [[-R/--reg <registry>] [-I/--img <image>]|[-i/--image <image_URI>]]
         [[-t/--tag <tag>]|[-c/--container <name>]] [command_to_run]]
 toolbox is a small script that launches a container to let you bring in your favorite debugging or admin tools.
@@ -228,6 +228,11 @@ Commands are optional and imply user mode (-u):
  create: Just create the toolbox
  enter: Enter inside a toolbox (if it does not exist, it is created)
  run: Run command_to_run inside a toolbox (if it does not exist, it is created)
+
+For the create and enter commands, the toolbox name can be specified either:
+ - with -t/--tag, e.g.: 'toolbox enter -t dev'. For user foo, will enter 'toolbox-foo-user-dev'. Or,
+ - with -c/--container, e.g.: 'toolbox create -c work'. Will create 'work'. Or
+ - with just the name of the container, e.g.: 'toolbox enter test'. Will enter 'test'.
 
 Options:
   -h/--help: Shows this help message
@@ -404,12 +409,29 @@ main() {
 
     case $COMMAND in
         create|enter|run)
+            if [ "$COMMAND" = "enter" ] || [ "$COMMAND" = "create" ]; then
+                # enter and create supports the name of the container being
+                # as an argument, so use if it's there. But there must be no
+                # conflict between that and the -c and -t options.
+                if [ $# -ge 1 ]; then
+                    if [ -n "$CHANGE_NAME" ] || [ -n "$TAG" ]; then
+                        echo "ERROR: Cannot determine which container to use between $TOOLBOX_NAME and $1"
+                        show_help
+                        exit 1
+                    fi
+                    TOOLBOX_NAME=$1
+                    shift
+                fi
+            fi
+
             # Cleanup is only needed if we're really starting the container
             trap cleanup EXIT
 
-            if [ "$COMMAND" == "create" ]; then
+            if [ "$COMMAND" = "create" ]; then
+                [ $# -gt 0 ] && echo "WARNING: ignoring the following arguments: $@"
                 create
-            elif [ -z "$*" ]; then
+            elif [ "$COMMAND" = "enter" ] || [ $# -eq 0 ]; then
+                [ "$COMMAND" = "enter" ] && [ $# -gt 0 ] && echo "WARNING: ignoring the following arguments: $@"
                 run ${TOOLBOX_SHELL}
             else
                 run "$@"
