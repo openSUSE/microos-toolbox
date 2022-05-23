@@ -198,6 +198,7 @@ container_create() {
         CREATE_NO_SANDBOX="$CREATE_NO_SANDBOX --privileged --security-opt label=disable --pid host --ipc host"
     fi
     if ! ${SUDO} $CLI create \
+                 $RUNTIME \
                  --hostname "$TOOLBOX_NAME" \
                  --name "$TOOLBOX_NAME" \
                  --network host \
@@ -238,7 +239,7 @@ container_exec() {
 show_help() {
     echo "USAGE: toolbox [[-h/--help] | [list|create [<name>]|enter [<name>]|run|stop [<name>]] [-r/--root] [-u/--user]
         [-n/--nostop] [-S/--sandbox] [-P/--no-pull] [[-R/--reg <registry>] [-I/--img <image>]|[-i/--image <image_URI>]]
-        [[-t/--tag <tag>]|[-c/--container <name>]] [command_to_run]]
+        [-X/--runtime <runtime_bin>] [[-t/--tag <tag>]|[-c/--container <name>]] [command_to_run]]
 toolbox is a small script that launches a container to let you bring in your favorite debugging or admin tools.
 The toolbox container is a pet container and will be restarted on following runs.
 To remove the container and start fresh, do $CLI rm ${TOOLBOX_NAME}.
@@ -259,6 +260,7 @@ Options:
   -h/--help: Shows this help message
   -u/--user: Run as the current user inside the container
   -r/--root: Runs $CLI via sudo as root
+  -X/--runtime <runtime_bin>: Use the specified runtime (e.g., /usr/bin/crun)
   -n/--nostop: Does not stop the container on exit, allowing multiple
                sessions to use the same toolbox at once
   -S/--sandbox: Start a \"less privileged than usual\" toolbox. It remains
@@ -320,7 +322,7 @@ main() {
         esac
     fi
 
-    ARGS=$(getopt -o hrunSPt:R:I:c:i: --long help,root,user,nostop,sandbox,no-pull,tag:,reg:,img:,container:,image: -n toolbox -- "$@")
+    ARGS=$(getopt -o hrunSPt:R:I:c:i:X: --long help,root,user,nostop,sandbox,no-pull,tag:,reg:,img:,container:,image:,runtime: -n toolbox -- "$@")
     eval set -- "$ARGS"
     while true; do
         case "$1" in
@@ -332,6 +334,15 @@ main() {
             -r|--root)
                 shift
                 SUDO=sudo
+                ;;
+            -X|--runtime)
+                RUNTIME="--runtime $2"
+                if ! command -v $2 &> /dev/null ; then
+                    echo "ERROR: $2 not available as runtime!"
+                    show_help
+                    exit 1
+                fi
+                shift 2
                 ;;
             -u|--user)
                 shift
@@ -439,6 +450,9 @@ main() {
         test -d /run/media && VOLUMES="$VOLUMES --volume /run/media/:/run/media/:rslave"
         if  [[ "$CLI" == "podman" ]]; then
             CREATE_AS_USER="--userns=keep-id --user root:root $VOLUMES"
+            # Let's retain the user's groupd. This will (probably) only work
+            # with some runtime, but it's harmless for other, so worth a try.
+            CREATE_AS_USER=" $CREATE_AS_USER --annotation run.oci.keep_original_groups=1"
         elif  [[ "$CLI" == "docker" ]]; then
             CREATE_AS_USER="--user root:root $VOLUMES"
         fi
