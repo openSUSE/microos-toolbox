@@ -448,13 +448,15 @@ main() {
         test -d "${HOME}" && VOLUMES="$VOLUMES --volume ${HOME}:${HOME}"
         test -d "/run/user/${USER_ID}" && VOLUMES="$VOLUMES --volume /run/user/${USER_ID}:/run/user/${USER_ID}:rslave"
         test -d /run/media && VOLUMES="$VOLUMES --volume /run/media/:/run/media/:rslave"
-        if  [[ "$CLI" == "podman" ]]; then
-            CREATE_AS_USER="--userns=keep-id --user root:root $VOLUMES"
+        CREATE_AS_USER="--user root:root $VOLUMES"
+	if  [[ "$CLI" == "podman" ]]; then
             # Let's retain the user's groupd. This will (probably) only work
             # with some runtime, but it's harmless for other, so worth a try.
-            CREATE_AS_USER=" $CREATE_AS_USER --annotation run.oci.keep_original_groups=1"
-        elif  [[ "$CLI" == "docker" ]]; then
-            CREATE_AS_USER="--user root:root $VOLUMES"
+            CREATE_AS_USER="$CREATE_AS_USER --annotation run.oci.keep_original_groups=1"
+	    # userns=keep-id only works if being used rootless
+            if  [[ -z $SUDO ]]; then
+                CREATE_AS_USER="$CREATE_AS_USER --userns=keep-id"
+            fi
         fi
         for ENV in $USER_ENV ; do
             eval VAL="$""$ENV"
