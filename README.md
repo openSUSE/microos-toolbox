@@ -371,8 +371,8 @@ toolbox-bob:/ #
 If you want to run a rootless `toolbox` setup you might need to add a range of UID and GID for the user you want to run `toolbox` with. Before adding UID and GID ranges check if `/etc/subuid` and `/etc/subgid` are actually empty. If empty you can run this as root to populate them:
 
 ```
-echo "podman_user:100000:65536" > /etc/subuid
-echo "podman_user:100000:65536" > /etc/subgid
+echo "podman_user:100000:65536" >> /etc/subuid
+echo "podman_user:100000:65536" >> /etc/subgid
 ```
 
 ### GUI application can't connect to display
