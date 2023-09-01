@@ -126,7 +126,8 @@ run() {
 }
 
 cleanup() {
-    if [ $(container_active) -eq 0 ] && [ -z "$NO_STOP" ]; then
+    active="$(container_active)"
+    if [ $active != "" ] && [ $active -eq 0 ] && [ -z "$NO_STOP" ]; then
 	${SUDO} $CLI stop "$TOOLBOX_NAME" &>/dev/null
     fi
 }
