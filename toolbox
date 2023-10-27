@@ -54,7 +54,7 @@ create() {
         fi
         local runlabel
         runlabel=$(image_runlabel) ||:
-	
+
         echo "Spawning a container '$TOOLBOX_NAME' with image '$TOOLBOX_IMAGE'"
         if [[ -z "$runlabel" ]]; then
             container_create
