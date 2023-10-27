@@ -47,7 +47,7 @@ setup() {
 }
 
 create() {
-    local msg="creat"
+    local msg="create"
     if ! container_exists; then
         if ! image_exists || [ -z "$NO_PULL" ]; then
             image_pull
