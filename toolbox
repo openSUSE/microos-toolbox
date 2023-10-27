@@ -195,7 +195,7 @@ stop() {
 container_create() {
     if [ -z "$SANDBOX" ]; then
         # this is the default behavior, unless --sandbox is specified
-        CREATE_NO_SANDBOX="--volume /dev:/dev:rslave --volume /sys:/sys:rslave --volume /:/media/root:rslave"
+        CREATE_NO_SANDBOX="--mount type=devpts,destination=/dev/pts,uid=$(id -u) --volume /sys:/sys:rslave --volume /:/media/root:rslave"
         CREATE_NO_SANDBOX="$CREATE_NO_SANDBOX --privileged --security-opt label=disable --pid host --ipc host"
     fi
     if ! ${SUDO} $CLI create \
