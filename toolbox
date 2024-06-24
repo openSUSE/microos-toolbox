@@ -47,7 +47,7 @@ setup() {
 }
 
 create() {
-    local msg="create"
+    local msg="created"
     if ! container_exists; then
         if ! image_exists || [ -z "$NO_PULL" ]; then
             image_pull
@@ -68,7 +68,7 @@ create() {
     else
         echo "Container '$TOOLBOX_NAME' already exists. Trying to start..."
         echo "(To remove the container and start with a fresh toolbox, run: $CLI rm '$TOOLBOX_NAME')"
-        msg="start"
+        msg="started"
     fi
 
     local state
@@ -115,7 +115,7 @@ EOF
         ${SUDO} $CLI exec --user root "${TOOLBOX_NAME}" rm "${tmp_user_setup}"
     fi
 
-    echo "Container ${msg}ed."
+    echo "Container ${msg}."
 }
 
 run() {
