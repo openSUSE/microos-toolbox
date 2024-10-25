@@ -1,4 +1,4 @@
-# **toolbox** - script to start a toolbox container for system debugging
+**toolbox** - script to start a toolbox container for system debugging
 
 # SYNOPSIS
 
