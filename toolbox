@@ -32,7 +32,7 @@ else
     echo "$0: ERROR: neither 'podman' nor 'docker' are available. Exiting!"
 fi
 
-test -f /usr/etc/toolboxrc && . /usr/etc/toolboxrc
+test -f /usr/share/toolbox/toolboxrc && . /usr/share/toolbox/toolboxrc
 test -f /etc/toolboxrc && . /etc/toolboxrc
 
 MODE="system"
