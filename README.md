@@ -4,7 +4,6 @@
 
 **toolbox** [[-h/--help] | [list|create [\<name\>]|enter [\<name\>]|run|stop [\<name\>]] [-r/--root] [-u/--user] [-n/--nostop] [-S/--sandbox] [-P/--no-pull] [[-R/--reg \<registry\>] [-I/--img \<image\>]|[-i/--image \<image_URI\>]] [-X/--runtime \<runtime_bin\>] [[-t/--tag \<tag\>]|[-c/--container \<name\>]] [command_to_run]]
 
-
 # DESCRIPTION
 
 On systems using `transactional-update` it is not really possible - due to the read-only root filesystem - to install tools to analyze problems in the currently running system as a reboot is always required. This makes it next to impossible to debug such problems.
@@ -65,7 +64,7 @@ It is possible to interact with `toolbox` using a command based interface such a
 * `run`: Run a command / start a program inside a toolbox
 * `list`: Show existing toolboxes, although for now it is basically an alias to `podman ps -a`
 
-This commands imply user mode (-u) and uses a different container (`toolbox-\<user\>-user` vs. `toolbox-\<user\>`).
+This commands imply user mode (-u) and uses a different container (`toolbox-<user>-user` vs. `toolbox-<user>`).
 
 # ROOTLESS
 
