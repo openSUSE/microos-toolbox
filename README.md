@@ -22,6 +22,7 @@ The following options are available in `toolbox`:
 * `-r` or `--root`: Runs podman via sudo as root
 * `-t` or `--tag` `<tag>`: Add `<tag>` to the toolbox name
 * `-c` or `--container` `<name>`: Fully replace the toolbox name with `<name>` (alternative to `-t`)
+* `--podman-args` `<args>`: Pass addition args to podman command
 
 The following variables can be overridden by setting them in `${HOME}/.toolboxrc`:
 
