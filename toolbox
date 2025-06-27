@@ -262,7 +262,7 @@ For the create, enter and stop commands, the toolbox name can be specified eithe
 
 Options:
   -h/--help: Shows this help message
-  -u/--user: Run as the current user inside the container
+  -u/--user: Run as the current user inside the container (don't use this when logged in as 'root')
   -r/--root: Runs $CLI via sudo as root
   -X/--runtime <runtime_bin>: Use the specified runtime (e.g., /usr/bin/crun)
   -n/--nostop: Does not stop the container on exit, allowing multiple
@@ -350,6 +350,11 @@ main() {
                 shift 2
                 ;;
             -u|--user)
+                if [[ $(id -u) == 0 ]] ; then
+                    echo "ERROR: --user mode not available if running as root"
+                    show_help
+                    exit 1
+		fi
                 shift
                 MODE="user"
                 ;;
