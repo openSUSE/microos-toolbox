@@ -206,6 +206,14 @@ container_create() {
     if [ -s /etc/zypp/credentials.d/SCCcredentials ]; then
        SUSECONNECT_FILES="$SUSECONNECT_FILES --volume /etc/zypp/credentials.d/SCCcredentials:/etc/zypp/credentials.d/SCCcredentials"
     fi
+    local RKE_ARGS=""
+    if [ -s /var/lib/rancher/rke2/bin/kubectl ]; then
+        RKE_ARGS="$RKE_ARGS --volume /var/lib/rancher/rke2/bin/kubectl:/usr/local/bin/kubectl:ro"
+    fi
+    if [ -s /etc/rancher/rke2/rke2.yaml ]; then
+        RKE_ARGS="$RKE_ARGS --volume /etc/rancher/rke2/rke2.yaml:/etc/rancher/rke2/rke2.yaml:ro"
+        RKE_ARGS="$RKE_ARGS --env KUBECONFIG=/etc/rancher/rke2/rke2.yaml"
+    fi
     if ! ${SUDO} $CLI create \
                  $RUNTIME \
                  --hostname "$TOOLBOX_NAME" \
@@ -217,6 +225,7 @@ container_create() {
                  --volume /etc/localtime:/etc/localtime:ro \
                  ${SUSECONNECT_FILES} \
                  ${PODMAN_ARGS[@]} \
+                 ${RKE_ARGS} \
                  "$TOOLBOX_IMAGE" sleep +Inf > /dev/null; then
         echo "$0: failed to create container '$TOOLBOX_NAME'"
         exit 1
